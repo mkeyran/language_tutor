@@ -111,7 +111,7 @@ LEVELS = [
 ]
 
 CONFIG_PATH = os.path.join(os.path.dirname(__file__), "config.json")
-
+STATE_PATH = os.path.join(os.path.dirname(__file__), "state.json")
 
 
 class LanguageTutorApp(App):
@@ -159,6 +159,55 @@ class LanguageTutorApp(App):
                 self.notify(f"Loaded config: Language={self.selected_language}, Level={self.selected_level}")
             except Exception as e:
                 self.notify(f"Error loading config: {e}", severity="error")
+
+    def save_state(self):
+        """Save the current application state to state.json."""
+        try:
+            state = {
+                "selected_language": self.selected_language,
+                "selected_exercise": self.selected_exercise,
+                "selected_level": self.selected_level,
+                "generated_exercise": self.generated_exercise,
+                "generated_hints": self.generated_hints,
+                "writing_input": self.query_one("#writing-input", TextArea).text,
+                "mistakes": self.query_one("#mistakes-display", TextArea).text,
+                "style": self.query_one("#style-display", TextArea).text,
+                "recs": self.query_one("#recs-display", TextArea).text,
+            }
+            with open(STATE_PATH, "w") as f:
+                json.dump(state, f)
+            self.notify("State saved successfully.")
+        except Exception as e:
+            self.notify(f"Error saving state: {e}", severity="error")
+
+    def load_state(self):
+        """Load the application state from state.json."""
+        if not os.path.exists(STATE_PATH):
+            self.notify("No saved state found.", severity="warning")
+            return
+        try:
+            with open(STATE_PATH, "r") as f:
+                state = json.load(f)
+            # Restore selections
+            self.selected_language = state.get("selected_language", "")
+            self.selected_exercise = state.get("selected_exercise", "")
+            self.selected_level = state.get("selected_level", "")
+            self.generated_exercise = state.get("generated_exercise", "")
+            self.generated_hints = state.get("generated_hints", "")
+            # Restore Select widgets
+            self.query_one("#language-select", Select).value = self.selected_language
+            self.query_one("#exercise-select", Select).value = self.selected_exercise
+            self.query_one("#level-select", Select).value = self.selected_level
+            # Restore TextAreas
+            self.query_one("#exercise-display", TextArea).load_text(self.generated_exercise)
+            self.query_one("#hints-display", TextArea).load_text(self.generated_hints)
+            self.query_one("#writing-input", TextArea).load_text(state.get("writing_input", ""))
+            self.query_one("#mistakes-display", TextArea).load_text(state.get("mistakes", ""))
+            self.query_one("#style-display", TextArea).load_text(state.get("style", ""))
+            self.query_one("#recs-display", TextArea).load_text(state.get("recs", ""))
+            self.notify("State loaded successfully.")
+        except Exception as e:
+            self.notify(f"Error loading state: {e}", severity="error")
 
     def compose(self) -> ComposeResult:
         """Create child widgets for the app."""
@@ -238,11 +287,11 @@ class LanguageTutorApp(App):
 
     def action_save_state(self) -> None:
         """Save the current application state."""
-        self.notify("Save functionality not yet implemented.")
+        self.save_state()
 
     def action_load_state(self) -> None:
         """Load the application state."""
-        self.notify("Load functionality not yet implemented.")
+        self.load_state()
 
     async def action_generate_exercise(self) -> None:
         """Generate a new exercise using LiteLLM."""
