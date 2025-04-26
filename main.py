@@ -1,3 +1,4 @@
+import datetime
 import os
 from dotenv import load_dotenv
 import litellm
@@ -112,6 +113,9 @@ LEVELS = [
 
 CONFIG_PATH = os.path.join(os.path.dirname(__file__), "config.json")
 STATE_PATH = os.path.join(os.path.dirname(__file__), "state.json")
+EXPORT_PATH = os.path.join(os.path.dirname(__file__), "export")
+if not os.path.exists(EXPORT_PATH):
+    os.makedirs(EXPORT_PATH)
 
 
 class LanguageTutorApp(App):
@@ -120,6 +124,7 @@ class LanguageTutorApp(App):
     BINDINGS = [
         ("ctrl+s", "save_state", "Save"),
         ("ctrl+l", "load_state", "Load"),
+        ("ctrl+e", "export_markdown", "Export Markdown"),
     ]
 
     CSS_PATH = "styles.tcss"  # We'll create this file later
@@ -209,6 +214,49 @@ class LanguageTutorApp(App):
         except Exception as e:
             self.notify(f"Error loading state: {e}", severity="error")
 
+    def export_markdown(self):
+        """Export the current exercise, writing, and feedback to a Markdown file."""
+        try:
+            exercise = self.generated_exercise or ""
+            hints = self.generated_hints or ""
+            writing = self.query_one("#writing-input", TextArea).text or ""
+            mistakes = self.query_one("#mistakes-display", TextArea).text or ""
+            style = self.query_one("#style-display", TextArea).text or ""
+            recs = self.query_one("#recs-display", TextArea).text or ""
+
+            md = f"""# Language Tutor Export
+
+**Language:** {self.selected_language}
+**Level:** {self.selected_level}
+**Exercise Type:** {self.selected_exercise}
+
+## Exercise
+{exercise}
+
+## Hints
+{hints if hints else "None."}
+
+## Your Writing
+{writing}
+
+## Mistakes
+{mistakes if mistakes else "None."}
+
+## Stylistic Errors
+{style if style else "None."}
+
+## Recommendations
+{recs if recs else "None."}
+"""
+
+            datetime_str = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            file_path = os.path.join(EXPORT_PATH, f"{self.selected_language}_{self.selected_exercise}_{datetime_str}.md")
+            with open(file_path, "w") as f:
+                f.write(md)
+            self.notify(f"Exported to {file_path}")
+        except Exception as e:
+            self.notify(f"Error exporting markdown: {e}", severity="error")
+
     def compose(self) -> ComposeResult:
         """Create child widgets for the app."""
         yield Header()
@@ -246,17 +294,25 @@ class LanguageTutorApp(App):
         if not litellm.api_key:
             self.notify("Error: OPENROUTER_API_KEY not found in .env file.", severity="error", timeout=10)
 
+    def _update_word_count(self) -> None:
+        """Update the word count label."""
+        text_area = self.query_one("#writing-input", TextArea)
+        word_count = len(text_area.text.split())
+        if self.selected_exercise == "":
+            self.query_one("#word-count-label", Static).update(f"Word Count: {word_count}")
+        else:
+            self.query_one("#word-count-label", Static).update(f"Word Count: {word_count}, min {EXCERCISE_DEFINITIONS[self.selected_exercise]['expected_length'][0]}, max {EXCERCISE_DEFINITIONS[self.selected_exercise]['expected_length'][1]}")
+            if word_count < EXCERCISE_DEFINITIONS[self.selected_exercise]['expected_length'][0] or word_count > EXCERCISE_DEFINITIONS[self.selected_exercise]['expected_length'][1]:
+                self.query_one("#word-count-label", Static).classes = "red"
+            else:
+                self.query_one("#word-count-label", Static).classes = ""
+        self.query_one("#word-count-label", Static).refresh()
+
     def on_text_area_changed(self, event: TextArea.Changed) -> None:
         """Handle changes in the TextArea for writing input."""
         if event.text_area.id == "writing-input":
-            word_count = len(event.control.text.split())
-            self.query_one("#word-count-label", Static).update(f"Word Count: {word_count}, min {EXCERCISE_DEFINITIONS[self.selected_exercise]['expected_length'][0]}, max {EXCERCISE_DEFINITIONS[self.selected_exercise]['expected_length'][1]}")
-            if word_count < EXCERCISE_DEFINITIONS[self.selected_exercise]['expected_length'][0] or word_count > EXCERCISE_DEFINITIONS[self.selected_exercise]['expected_length'][1]:
-                self.query_one("#word-count-label", Static).classes = "red"  # Change color to red if out of range
-            else:
-                self.query_one("#word-count-label", Static).classes = ""  # Reset color if within range
-            # Update the word count label
-
+            self._update_word_count()
+                
         
     def on_select_changed(self, event: Select.Changed) -> None:
         """Handle changes in the Select widgets."""
@@ -267,6 +323,8 @@ class LanguageTutorApp(App):
         elif event.select.id == "exercise-select":
             self.selected_exercise = event.value
             self.notify(f"Exercise type set to: {event.value}")
+            # Update the expected length in the word count label
+            self._update_word_count()
         elif event.select.id == "level-select":
             self.selected_level = event.value
             self.save_config()  # Save on change
@@ -293,6 +351,10 @@ class LanguageTutorApp(App):
         """Load the application state."""
         self.load_state()
 
+    def action_export_markdown(self) -> None:
+        """Export the current state to Markdown."""
+        self.export_markdown()
+
     async def action_generate_exercise(self) -> None:
         """Generate a new exercise using LiteLLM."""
         if not self.selected_language or not self.selected_exercise:
@@ -313,7 +375,8 @@ class LanguageTutorApp(App):
         try:
             # Construct prompt asking for specific formatting
             prompt = f"""Create a short '{self.selected_exercise}' writing exercise for a learner of {self.selected_language} for a proficiency level {self.selected_level}.
-            Random number is {random.randint(1, 10000)}.
+            The expected length of the writing should be between {EXCERCISE_DEFINITIONS[self.selected_exercise]['expected_length'][0]} and {EXCERCISE_DEFINITIONS[self.selected_exercise]['expected_length'][1]} words.
+            Random number is {random.randint(1, 10000)} (don't use it, it is just to make the prompt different). 
 Provide the exercise text and optionally some hints. The requirements for the exercise are:
 '{EXCERCISE_DEFINITIONS[self.selected_exercise]['requirements']}'
 You should generate exactly one exercise.
