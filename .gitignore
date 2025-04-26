@@ -1,0 +1,25 @@
+# Ignore environment variables file
+.env
+
+# Ignore Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Ignore virtual environment folders
+.venv/
+virtualenv/
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Ignore uv lock file (optional, depending on workflow)
+# uv.lock
+
+# Python-generated files
+build/
+dist/
+wheels/
+*.egg-info

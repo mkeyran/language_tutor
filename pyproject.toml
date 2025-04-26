@@ -1,0 +1,12 @@
+[project]
+name = "language-tutor"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "litellm>=1.67.2",
+    "python-dotenv>=1.1.0",
+    "textual>=3.1.1",
+    "toml>=0.10.2",
+]
