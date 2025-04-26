@@ -78,3 +78,10 @@ Header {
 Footer {
     dock: bottom;
 }
+
+.red {
+    color: red;
+}
+.green {
+    color: green;
+}
