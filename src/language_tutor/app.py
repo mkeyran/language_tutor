@@ -1,47 +1,23 @@
 """Main application module for Language Tutor."""
 
 import datetime
+import json
 import os
 import importlib.resources as resources
 from dotenv import load_dotenv
 import litellm
-import re
-import json
 from textual.app import App, ComposeResult
-from textual.containers import Container
+from textual.containers import Container, Horizontal, Vertical
 from textual.widgets import Header, Footer, Button, Select, Static, TextArea
-from textual.containers import Horizontal, Vertical
-import random
-from textual import events
 from textual.reactive import var
-from litellm import completion, completion_cost
-from litellm.types.utils import CostPerToken
 
 from language_tutor.languages import exercise_types, definitions
+from language_tutor.config import (
+    LANGUAGES, LEVELS, get_config_path, get_state_path, get_export_path
+)
+from language_tutor.utils import generate_exercise, check_writing
+from language_tutor.screens import QAScreen
 
-# Configure LiteLLM model names and prices
-OR_MODEL_NAME = "openrouter/google/gemini-2.5-flash-preview"  # Example model, replace with your preferred model
-OR_MODEL_NAME_CHECK = "openrouter/google/gemini-2.5-flash-preview:thinking"  # Example model, replace with your preferred model
-
-MODEL_PRICE_PER_TOKEN = {
-    "gemini-2.5-flash-preview": CostPerToken(input_cost_per_token=0.15/1e6, output_cost_per_token=0.6/1e6),
-    "gemini-2.5-flash-preview:thinking": CostPerToken(input_cost_per_token=0.15/1e6, output_cost_per_token=0.6/1e6),
-}
-
-# --- Define available options ---
-LANGUAGES = [
-    ("Polish", "pl"),
-    ("Portuguese", "pt"),
-]
-
-LEVELS = [
-    ("Beginner", "A1"),
-    ("Elementary", "A2"),
-    ("Intermediate", "B1"),
-    ("Upper Intermediate", "B2"),
-    ("Advanced", "C1"),
-    ("Proficient", "C2"),
-]
 
 class LanguageTutorApp(App):
     """A Textual app to help with foreign language writing exercises."""
@@ -58,6 +34,7 @@ class LanguageTutorApp(App):
         ("ctrl+s", "save_state", "Save"),
         ("ctrl+l", "load_state", "Load"),
         ("ctrl+e", "export_markdown", "Export Markdown"),
+        ("ctrl+a", "open_qa_screen", "Ask AI"),
     ]
 
     # Use importlib.resources instead of deprecated pkg_resources
@@ -77,16 +54,16 @@ class LanguageTutorApp(App):
             "selected_level": self.selected_level,
         }
         try:
-            with open(self._get_config_path(), "w") as f:
+            with open(get_config_path(), "w") as f:
                 json.dump(config, f)
         except Exception as e:
             self.notify(f"Error saving config: {e}", severity="error")
 
     def load_config(self):
         """Load selected_language and selected_level from config.json."""
-        if os.path.exists(self._get_config_path()):
+        if os.path.exists(get_config_path()):
             try:
-                with open(self._get_config_path(), "r") as f:
+                with open(get_config_path(), "r") as f:
                     config = json.load(f)
                 self.selected_language = config.get("selected_language", self.selected_language)
                 self.selected_level = config.get("selected_level", self.selected_level)
@@ -113,7 +90,7 @@ class LanguageTutorApp(App):
                 "style": self.query_one("#style-display", TextArea).text,
                 "recs": self.query_one("#recs-display", TextArea).text,
             }
-            with open(self._get_state_path(), "w") as f:
+            with open(get_state_path(), "w") as f:
                 json.dump(state, f)
             self.notify("State saved successfully.")
         except Exception as e:
@@ -121,11 +98,11 @@ class LanguageTutorApp(App):
 
     def load_state(self):
         """Load the application state from state.json."""
-        if not os.path.exists(self._get_state_path()):
+        if not os.path.exists(get_state_path()):
             self.notify("No saved state found.", severity="warning")
             return
         try:
-            with open(self._get_state_path(), "r") as f:
+            with open(get_state_path(), "r") as f:
                 state = json.load(f)
             # Restore selections
             self.selected_language = state.get("selected_language", "")
@@ -186,7 +163,7 @@ class LanguageTutorApp(App):
 """
 
             datetime_str = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-            export_dir = self._get_export_path()
+            export_dir = get_export_path()
             if not os.path.exists(export_dir):
                 os.makedirs(export_dir)
                 
@@ -197,33 +174,12 @@ class LanguageTutorApp(App):
         except Exception as e:
             self.notify(f"Error exporting markdown: {e}", severity="error")
 
-    def _get_config_dir(self):
-        """Get the configuration directory."""
-        # Use standard XDG_CONFIG_HOME or fallback to ~/.config
-        config_dir = os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config"))
-        app_config_dir = os.path.join(config_dir, "language-tutor")
-        if not os.path.exists(app_config_dir):
-            os.makedirs(app_config_dir)
-        return app_config_dir
-        
-    def _get_config_path(self):
-        """Get the path to the config file."""
-        return os.path.join(self._get_config_dir(), "config.json")
-        
-    def _get_state_path(self):
-        """Get the path to the state file."""
-        return os.path.join(self._get_config_dir(), "state.json")
-        
-    def _get_export_path(self):
-        """Get the path to the export directory."""
-        return os.path.join(self._get_config_dir(), "export")
-
     def compose(self) -> ComposeResult:
         """Create child widgets for the app."""
         yield Header()
         with Horizontal(id="app-grid"):
             with Vertical(id="left-pane"):
-                yield Static("Language:", classes="label")
+                yield Static("Language:", classes="label", shrink=True)
                 yield Select(LANGUAGES, id="language-select", prompt="Select Language...")
                 yield Static("Level:", classes="label")
                 yield Select(LEVELS, id="level-select", prompt="Select Level...")
@@ -276,7 +232,7 @@ class LanguageTutorApp(App):
                 self.query_one("#word-count-label", Static).classes = ""
         self.query_one("#word-count-label", Static).refresh()
 
-    def on_text_area_changed(self, event: TextArea.Changed) -> None:
+    def on_text_area_changed(self, event) -> None:
         """Handle changes in the TextArea for writing input."""
         if event.text_area.id == "writing-input":
             self._update_word_count()
@@ -291,7 +247,7 @@ class LanguageTutorApp(App):
        
         exercise_select.refresh()
 
-    def on_select_changed(self, event: Select.Changed) -> None:
+    def on_select_changed(self, event) -> None:
         """Handle changes in the Select widgets."""
         if event.select.id == "language-select":
             self.selected_language = event.value
@@ -308,7 +264,7 @@ class LanguageTutorApp(App):
             self.save_config()  # Save on change
             self.notify(f"Level set to: {event.value}")
 
-    async def on_button_pressed(self, event: Button.Pressed) -> None:
+    async def on_button_pressed(self, event) -> None:
         """Handle button presses."""
         if event.button.id == "generate-btn":
             await self.action_generate_exercise()
@@ -333,6 +289,10 @@ class LanguageTutorApp(App):
         """Export the current state to Markdown."""
         self.export_markdown()
 
+    def action_open_qa_screen(self) -> None:
+        """Open the QA screen."""
+        self.push_screen(QAScreen())
+
     async def action_generate_exercise(self) -> None:
         """Generate a new exercise using LiteLLM."""
         if not self.selected_language or not self.selected_exercise:
@@ -351,54 +311,22 @@ class LanguageTutorApp(App):
 
         self.notify(f"Generating '{self.selected_exercise}' exercise for {self.selected_language}...", timeout=5)
         try:
-            # Construct prompt asking for specific formatting
-            prompt = f"""Create a short '{self.selected_exercise}' writing exercise for a learner of {self.selected_language} for a proficiency level {self.selected_level}.
-            The expected length of the writing should be between {self.excercise_definitions[self.selected_exercise]['expected_length'][0]} and {self.excercise_definitions[self.selected_exercise]['expected_length'][1]} words.
-            Random number is {random.randint(1, 10000)} (don't use it, it is just to make the prompt different). 
-Provide the exercise text and optionally some hints. The requirements for the exercise are:
-'{self.excercise_definitions[self.selected_exercise]['requirements']}'
-You should generate exactly one exercise. It should be a task, not the text of the exercise itself.
-
-Format the output EXACTLY like this, using these specific headings:
-
-**Exercise:**
-[The exercise text goes here]
-
-**Hints:**
-[Optional hints go here. You can add useful phrases in addition to the hints. If no hints, write "None."]
-"""
-            messages = [{"role": "user", "content": prompt}]
-
-            # Make the async API call
-            response = await litellm.acompletion(model=OR_MODEL_NAME, messages=messages, api_base=litellm.base_url)
-            cost = completion_cost(response, custom_cost_per_token=MODEL_PRICE_PER_TOKEN[OR_MODEL_NAME.split("/")[-1]])
-            self.notify(f"Cost of generation: {cost:.4f} USD", timeout=5)
-
-            full_response_content = response.choices[0].message.content
-
-            # --- Basic Parsing ---
-            exercise_match = re.search(r"\*\*Exercise:\*\*\n(.*?)\n\*\*Hints:\*\*", full_response_content, re.DOTALL | re.IGNORECASE)
-            hints_match = re.search(r"\*\*Hints:\*\*\n(.*)", full_response_content, re.DOTALL | re.IGNORECASE)
-
-            if exercise_match:
-                self.generated_exercise = exercise_match.group(1).strip()
-            else:
-                # Fallback if parsing fails
-                self.generated_exercise = full_response_content.split("**Hints:**")[0].replace("**Exercise:**", "").strip()
-                self.notify("Could not precisely parse exercise, showing raw response part.", severity="warning")
-
-            if hints_match:
-                self.generated_hints = hints_match.group(1).strip()
-                if self.generated_hints.lower() == "none.":
-                    self.generated_hints = ""  # Clear if hints are explicitly none
-            else:
-                # Fallback if parsing fails
-                self.generated_hints = ""  # Assume no hints if parsing fails
-
+            # Use utility function to generate exercise
+            exercise_text, hints, cost = await generate_exercise(
+                language=self.selected_language,
+                level=self.selected_level,
+                exercise_type=self.selected_exercise,
+                definitions=self.excercise_definitions
+            )
+            
+            # Update stored values
+            self.generated_exercise = exercise_text
+            self.generated_hints = hints
+            
             # Update TextAreas
             self.query_one("#exercise-display", TextArea).load_text(self.generated_exercise)
             self.query_one("#hints-display", TextArea).load_text(self.generated_hints)
-            self.notify("Exercise generated!")
+            self.notify(f"Exercise generated! Cost: {cost:.4f} USD")
 
         except Exception as e:
             self.notify(f"Error generating exercise: {e}", severity="error", timeout=10)
@@ -428,53 +356,21 @@ Format the output EXACTLY like this, using these specific headings:
 
         self.notify("Checking your writing...", timeout=5)
         try:
-            # Construct prompt for checking, asking for specific format
-            prompt = f"""A student learning {self.selected_language} was given the exercise:
-'{self.generated_exercise}' with the following requirements:
-'{self.excercise_definitions[self.selected_exercise]['requirements']}'
-
-Their response was:
-'{writing_input}'
-
-Please check their writing. Provide feedback listing:
-1. Grammatical mistakes.
-2. Stylistic errors.
-3. Recommendations for improvement.
-4. Following the requirements of the exercise.
-Format the output EXACTLY like this, using these specific headings:
-
-**Mistakes:**
-[List of grammatical mistakes, or "None." if none found]
-
-**Stylistic Errors:**
-[List of stylistic errors, or "None." if none found]
-
-**Recommendations:**
-[List of recommendations, or "None." if none found]
-"""
-            messages = [{"role": "user", "content": prompt}]
-            model_name = OR_MODEL_NAME_CHECK
-
-            # Make the async API call
-            response = await litellm.acompletion(model=model_name, messages=messages, api_base=litellm.base_url)
-            cost = completion_cost(response, custom_cost_per_token=MODEL_PRICE_PER_TOKEN[model_name.split("/")[-1]])
-            self.notify(f"Cost of checking: {cost:.4f} USD", timeout=5)
-            feedback_content = response.choices[0].message.content
-
-            # --- Basic Parsing ---
-            mistakes_match = re.search(r"\*\*Mistakes:\*\*\n(.*?)\n\*\*Stylistic Errors:\*\*", feedback_content, re.DOTALL | re.IGNORECASE)
-            style_match = re.search(r"\*\*Stylistic Errors:\*\*\n(.*?)\n\*\*Recommendations:\*\*", feedback_content, re.DOTALL | re.IGNORECASE)
-            recs_match = re.search(r"\*\*Recommendations:\*\*\n(.*)", feedback_content, re.DOTALL | re.IGNORECASE)
-
-            mistakes = mistakes_match.group(1).strip() if mistakes_match else "Could not parse."
-            style_errors = style_match.group(1).strip() if style_match else "Could not parse."
-            recommendations = recs_match.group(1).strip() if recs_match else "Could not parse."
-
+            # Use utility function to check writing
+            mistakes, style_errors, recommendations, cost = await check_writing(
+                language=self.selected_language,
+                level=self.selected_level,
+                exercise_text=self.generated_exercise,
+                writing_input=writing_input,
+                exercise_type=self.selected_exercise,
+                definitions=self.excercise_definitions
+            )
+            
             # Update TextAreas
-            self.query_one("#mistakes-display", TextArea).load_text(mistakes if mistakes.lower() != "none." else "")
-            self.query_one("#style-display", TextArea).load_text(style_errors if style_errors.lower() != "none." else "")
-            self.query_one("#recs-display", TextArea).load_text(recommendations if recommendations.lower() != "none." else "")
-            self.notify("Feedback provided!")
+            self.query_one("#mistakes-display", TextArea).load_text(mistakes)
+            self.query_one("#style-display", TextArea).load_text(style_errors)
+            self.query_one("#recs-display", TextArea).load_text(recommendations)
+            self.notify(f"Feedback provided! Cost: {cost:.4f} USD")
 
         except Exception as e:
             self.notify(f"Error checking writing: {e}", severity="error", timeout=10)

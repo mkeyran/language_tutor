@@ -4,6 +4,7 @@ Screen {
     layout: grid;
     grid-size: 1;
     grid-gutter: 1 2;
+    background: $boost;
 }
 
 #app-grid {
@@ -11,24 +12,30 @@ Screen {
     grid-rows: 1;
     grid-size: 2;
     grid-gutter: 1 2;
+    width: 100%;
     height: 100%;
     border: thick $accent;
 }
 
 #left-pane {
     grid-columns: 1;
+    width: 50%;
+    height: 100%;
     border: thick $accent;
-    padding: 1;
+    padding: 1 2;
 }
 
 #right-pane {
     grid-columns: 2;
+    width: 50%;
+    height: 100%;
     border: thick $accent;
-    padding: 1;
+    padding: 1 2;
 }
 
 /* Style labels */
 .label {
+    margin-top: 1;
     margin-bottom: 1;
     text-style: bold;
 }
@@ -48,7 +55,7 @@ Button {
 
 /* Style TextAreas used for displaying info */
 .display-area {
-    height: 10;
+    height: 6;
     width: 100%;
     border: round $accent;
     margin-bottom: 1;
@@ -69,7 +76,7 @@ Button {
 
 /* Style the main input TextArea */
 .input-area {
-    height: 20;
+    height: 15;
     width: 100%;
     border: round $primary;
     margin-bottom: 1;
@@ -77,7 +84,7 @@ Button {
 
 /* Style TextAreas used for feedback */
 .feedback-area {
-    height: 8;
+    height: 10;
     width: 100%;
     border: round $secondary;
     margin-bottom: 1;
@@ -97,4 +104,20 @@ Footer {
 }
 .green {
     color: green;
+}
+
+/* QA Screen Styles */
+QAScreen {
+    align: left top;
+    layout: grid;
+    grid-size: 2 5;
+    width: 70%;
+    height: 70%;
+    background: $surface;
+    border: round $primary;
+    padding: 1 2;
+}
+
+#qa-close-btn{
+    grid-columns: 2;
 }
