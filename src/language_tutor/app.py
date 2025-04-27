@@ -3,6 +3,7 @@
 import datetime
 import json
 import os
+import random
 import importlib.resources as resources
 from dotenv import load_dotenv
 import litellm
@@ -200,12 +201,14 @@ class LanguageTutorApp(App):
             datetime_str = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
             export_dir = get_export_path()
             if not os.path.exists(export_dir):
-                os.makedirs(export_dir) 
+                os.makedirs(export_dir)
 
             file_path = os.path.join(
                 export_dir,
-                f"{self.selected_language}_{self.selected_exercise}_{datetime_str}.md",
-            ).replace(" ", "_").replace("/", "_")
+                f"{self.selected_language}_{self.selected_exercise}_{datetime_str}.md".replace(
+                    " ", "_"
+                ).replace("/", "_"),
+            )
             with open(file_path, "w") as f:
                 f.write(md)
             self.notify(f"Exported to {file_path}")
@@ -330,8 +333,16 @@ class LanguageTutorApp(App):
             self.save_config()  # Save on change
             self.notify(f"Language set to: {event.value}")
         elif event.select.id == "exercise-select":
-            self.selected_exercise = event.value
-            self.notify(f"Exercise type set to: {event.value}")
+            if event.value == "Random":
+                self.selected_exercise = self.excercise_types[
+                    random.randint(1, len(self.excercise_types) - 1)
+                ][0]
+                excercise_select = self.query_one("#exercise-select", Select)
+                excercise_select.value = self.selected_exercise
+                excercise_select.refresh()
+            else:
+                self.selected_exercise = event.value
+                self.notify(f"Exercise type set to: {self.selected_exercise}")
             # Update the expected length in the word count label
             self._update_word_count()
         elif event.select.id == "level-select":

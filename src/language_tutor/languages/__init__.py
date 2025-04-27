@@ -22,3 +22,6 @@ exercise_types = {
     "pt": PORTUGUESE_EXERCISE_TYPES,
     "en": ENGLISH_EXERCISE_TYPES,
 }
+
+for type in exercise_types.keys():
+    exercise_types[type] = [("Random", "Random")] + exercise_types[type]
