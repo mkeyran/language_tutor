@@ -110,7 +110,8 @@ Footer {
 QAScreen {
     align: left top;
     layout: grid;
-    grid-size: 2 5;
+    grid-size: 4;
+    grid-gutter: 1 1;
     width: 70%;
     height: 70%;
     background: $surface;
@@ -118,6 +119,14 @@ QAScreen {
     padding: 1 2;
 }
 
-#qa-close-btn{
-    grid-columns: 2;
+#qa-close-btn, #question-input, #cost-display{
+    column-span: 4;
+}
+
+#model-select, #answer-display, #question-input{
+    column-span: 3;
+}
+
+#send-btn, #clear-btn {
+    column-span: 2;
 }
