@@ -257,9 +257,6 @@ class LanguageTutorApp(App):
 
     def on_mount(self) -> None:
         """Called when the app is mounted."""
-        # Load environment variables from .env file
-        load_dotenv()
-
         # Configure LiteLLM to use OpenRouter
         litellm.api_key = os.getenv("OPENROUTER_API_KEY")
         litellm.base_url = (
@@ -267,6 +264,9 @@ class LanguageTutorApp(App):
         )
 
         self.load_config()  # Restore config on start
+        api_key = os.getenv("OPENROUTER_API_KEY")
+        if api_key:
+            litellm.api_key = api_key
         if not litellm.api_key:
             self.notify(
                 "Error: OPENROUTER_API_KEY not found in .env file. Please configure it in Settings (Ctrl+,).",
