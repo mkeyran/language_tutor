@@ -1,12 +1,31 @@
+[build-system]
+requires = ["setuptools>=61.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "language-tutor"
 version = "0.1.0"
-description = "Add your description here"
+description = "A language tutor app for writing exercises"
 readme = "README.md"
 requires-python = ">=3.12"
+license = {text = "MIT"}
+authors = [
+    {name = "Author"}
+]
 dependencies = [
     "litellm>=1.67.2",
     "python-dotenv>=1.1.0",
     "textual>=3.1.1",
     "toml>=0.10.2",
 ]
+
+[project.scripts]
+language-tutor = "language_tutor.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/username/language-tutor"
+Issues = "https://github.com/username/language-tutor/issues"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+packages = ["language_tutor", "language_tutor.languages"]

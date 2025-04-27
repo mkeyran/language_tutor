@@ -1,0 +1,100 @@
+/* Basic styling for the Language Tutor App */
+
+Screen {
+    layout: grid;
+    grid-size: 1;
+    grid-gutter: 1 2;
+}
+
+#app-grid {
+    grid-columns: 2;
+    grid-rows: 1;
+    grid-size: 2;
+    grid-gutter: 1 2;
+    height: 100%;
+    border: thick $accent;
+}
+
+#left-pane {
+    grid-columns: 1;
+    border: thick $accent;
+    padding: 1;
+}
+
+#right-pane {
+    grid-columns: 2;
+    border: thick $accent;
+    padding: 1;
+}
+
+/* Style labels */
+.label {
+    margin-bottom: 1;
+    text-style: bold;
+}
+
+/* Style Select widgets */
+Select {
+    width: 100%;
+    margin-bottom: 1;
+}
+
+/* Style Buttons */
+Button {
+    width: 100%;
+    margin-top: 1;
+    margin-bottom: 1;
+}
+
+/* Style TextAreas used for displaying info */
+.display-area {
+    height: 10;
+    width: 100%;
+    border: round $accent;
+    margin-bottom: 1;
+}
+
+#exercise-display {
+    height: 15;
+    width: 100%;
+    border: round $accent;
+    margin-bottom: 1;
+}
+#hints-display {
+    height: 15;
+    width: 100%;
+    border: round $accent;
+    margin-bottom: 1;
+}
+
+/* Style the main input TextArea */
+.input-area {
+    height: 20;
+    width: 100%;
+    border: round $primary;
+    margin-bottom: 1;
+}
+
+/* Style TextAreas used for feedback */
+.feedback-area {
+    height: 8;
+    width: 100%;
+    border: round $secondary;
+    margin-bottom: 1;
+}
+
+/* Header and Footer styling */
+Header {
+    dock: top;
+}
+
+Footer {
+    dock: bottom;
+}
+
+.red {
+    color: red;
+}
+.green {
+    color: green;
+}
