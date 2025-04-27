@@ -12,9 +12,11 @@ import random
 from textual import events
 from textual.app import App, ComposeResult
 from textual.widgets import TextArea
+from litellm import completion, completion_cost
+from litellm.types.utils import CostPerToken
 
 from textual.reactive import var
-from languages.polish import EXCERCISE_DEFINITIONS, EXERCISE_TYPES
+from languages import exercise_types, definitions
 
 # Load environment variables from .env file
 load_dotenv()
@@ -24,15 +26,17 @@ litellm.api_key = os.getenv("OPENROUTER_API_KEY")
 litellm.base_url = "https://openrouter.ai/api/v1"  # Or the specific OpenRouter endpoint
 #or_model_name = "openrouter/google/gemini-2.5-flash-preview:thinking"  # Example model, replace with your preferred model
 or_model_name = "openrouter/google/gemini-2.5-flash-preview"  # Example model, replace with your preferred model
+or_model_name_check = "openrouter/google/gemini-2.5-flash-preview:thinking"  # Example model, replace with your preferred model
+
+model_price_per_token = {
+    "gemini-2.5-flash-preview": CostPerToken(input_cost_per_token=0.15/1e6, output_cost_per_token=0.6/1e6),
+    "gemini-2.5-flash-preview:thinking": CostPerToken(input_cost_per_token=0.15/1e6, output_cost_per_token=0.6/1e6),
+}
+
 # --- Define available options ---
 LANGUAGES = [
     ("Polish", "pl"),
-    # ("Portuguese", "pt"),
-    # ("English", "en"),
-    # ("Spanish", "es"),
-    # ("French", "fr"),
-    # ("German", "de"),
-    # Add more languages as needed
+    ("Portuguese", "pt"),
 ]
 
 
@@ -54,6 +58,14 @@ if not os.path.exists(EXPORT_PATH):
 
 class LanguageTutorApp(App):
     """A Textual app to help with foreign language writing exercises."""
+
+    def __init__(self, excercise_types, excercise_definitions, *args, **kwargs):
+        """Initialize the app with exercise types and definitions."""
+        super().__init__(*args, **kwargs)
+        self.excercise_types_all = excercise_types
+        self.excercise_definitions_all = excercise_definitions
+        self.excercise_definitions = {}
+        self.excercise_types = []
 
     BINDINGS = [
         ("ctrl+s", "save_state", "Save"),
@@ -129,6 +141,8 @@ class LanguageTutorApp(App):
                 state = json.load(f)
             # Restore selections
             self.selected_language = state.get("selected_language", "")
+            self._reload_definitions()
+
             self.selected_exercise = state.get("selected_exercise", "")
             self.selected_level = state.get("selected_level", "")
             self.generated_exercise = state.get("generated_exercise", "")
@@ -201,7 +215,7 @@ class LanguageTutorApp(App):
                 yield Static("Level:", classes="label")
                 yield Select(LEVELS, id="level-select", prompt="Select Level...")
                 yield Static("Exercise Type:", classes="label")
-                yield Select(EXERCISE_TYPES, id="exercise-select", prompt="Select Exercise...")
+                yield Select(self.excercise_types, id="exercise-select", prompt="Select Exercise...")
                 yield Button("Generate Exercise", id="generate-btn", variant="primary")
                 yield Static("Exercise:", classes="label", id="exercise-label")
                 yield TextArea(self.generated_exercise, read_only=True, id="exercise-display", classes="display-area")
@@ -232,11 +246,11 @@ class LanguageTutorApp(App):
         """Update the word count label."""
         text_area = self.query_one("#writing-input", TextArea)
         word_count = len(text_area.text.split())
-        if self.selected_exercise == "":
+        if self.selected_exercise == "" or self.selected_exercise not in self.excercise_definitions:
             self.query_one("#word-count-label", Static).update(f"Word Count: {word_count}")
         else:
-            self.query_one("#word-count-label", Static).update(f"Word Count: {word_count}, min {EXCERCISE_DEFINITIONS[self.selected_exercise]['expected_length'][0]}, max {EXCERCISE_DEFINITIONS[self.selected_exercise]['expected_length'][1]}")
-            if word_count < EXCERCISE_DEFINITIONS[self.selected_exercise]['expected_length'][0] or word_count > EXCERCISE_DEFINITIONS[self.selected_exercise]['expected_length'][1]:
+            self.query_one("#word-count-label", Static).update(f"Word Count: {word_count}, min {self.excercise_definitions[self.selected_exercise]['expected_length'][0]}, max {self.excercise_definitions[self.selected_exercise]['expected_length'][1]}")
+            if word_count < self.excercise_definitions[self.selected_exercise]['expected_length'][0] or word_count > self.excercise_definitions[self.selected_exercise]['expected_length'][1]:
                 self.query_one("#word-count-label", Static).classes = "red"
             else:
                 self.query_one("#word-count-label", Static).classes = ""
@@ -246,12 +260,23 @@ class LanguageTutorApp(App):
         """Handle changes in the TextArea for writing input."""
         if event.text_area.id == "writing-input":
             self._update_word_count()
-                
-        
+
+    def _reload_definitions(self) -> None:
+        """Reload exercise definitions based on the selected language."""
+        self.excercise_types = self.excercise_types_all.get(self.selected_language, [])
+        self.excercise_definitions = self.excercise_definitions_all.get(self.selected_language, {})
+        # Update the exercise select options
+        exercise_select = self.query_one("#exercise-select", Select)
+        exercise_select.set_options(self.excercise_types)
+       
+        exercise_select.refresh()
+
+
     def on_select_changed(self, event: Select.Changed) -> None:
         """Handle changes in the Select widgets."""
         if event.select.id == "language-select":
             self.selected_language = event.value
+            self._reload_definitions()
             self.save_config()  # Save on change
             self.notify(f"Language set to: {event.value}")
         elif event.select.id == "exercise-select":
@@ -285,6 +310,7 @@ class LanguageTutorApp(App):
         """Load the application state."""
         self.load_state()
 
+
     def action_export_markdown(self) -> None:
         """Export the current state to Markdown."""
         self.export_markdown()
@@ -309,11 +335,11 @@ class LanguageTutorApp(App):
         try:
             # Construct prompt asking for specific formatting
             prompt = f"""Create a short '{self.selected_exercise}' writing exercise for a learner of {self.selected_language} for a proficiency level {self.selected_level}.
-            The expected length of the writing should be between {EXCERCISE_DEFINITIONS[self.selected_exercise]['expected_length'][0]} and {EXCERCISE_DEFINITIONS[self.selected_exercise]['expected_length'][1]} words.
+            The expected length of the writing should be between {self.excercise_definitions[self.selected_exercise]['expected_length'][0]} and {self.excercise_definitions[self.selected_exercise]['expected_length'][1]} words.
             Random number is {random.randint(1, 10000)} (don't use it, it is just to make the prompt different). 
 Provide the exercise text and optionally some hints. The requirements for the exercise are:
-'{EXCERCISE_DEFINITIONS[self.selected_exercise]['requirements']}'
-You should generate exactly one exercise.
+'{self.excercise_definitions[self.selected_exercise]['requirements']}'
+You should generate exactly one exercise. It should be a task, not the text of the exercise itself.
 
 Format the output EXACTLY like this, using these specific headings:
 
@@ -321,7 +347,7 @@ Format the output EXACTLY like this, using these specific headings:
 [The exercise text goes here]
 
 **Hints:**
-[Optional hints go here. If no hints, write "None."]
+[Optional hints go here. You can add useful phrases in addition to the hints. If no hints, write "None."]
 """
             messages = [{"role": "user", "content": prompt}]
 
@@ -331,6 +357,9 @@ Format the output EXACTLY like this, using these specific headings:
 
             # Make the async API call
             response = await litellm.acompletion(model=model_name, messages=messages, api_base=litellm.base_url)
+            cost = completion_cost(response, custom_cost_per_token=model_price_per_token[model_name.split("/")[-1]])
+            self.notify(f"Cost of generation: {cost:.4f} USD", timeout=5)
+
             full_response_content = response.choices[0].message.content
 
             # --- Basic Parsing ---
@@ -388,7 +417,7 @@ Format the output EXACTLY like this, using these specific headings:
             # Construct prompt for checking, asking for specific format
             prompt = f"""A student learning {self.selected_language} was given the exercise:
 '{self.generated_exercise}' with the following requirements:
-'{EXCERCISE_DEFINITIONS[self.selected_exercise]['requirements']}'
+'{self.excercise_definitions[self.selected_exercise]['requirements']}'
 
 Their response was:
 '{writing_input}'
@@ -410,10 +439,12 @@ Format the output EXACTLY like this, using these specific headings:
 [List of recommendations, or "None." if none found]
 """
             messages = [{"role": "user", "content": prompt}]
-            model_name = or_model_name  # Or another suitable model
+            model_name = or_model_name_check  # Or another suitable model
 
             # Make the async API call
             response = await litellm.acompletion(model=model_name, messages=messages, api_base=litellm.base_url)
+            cost = completion_cost(response, custom_cost_per_token=model_price_per_token[model_name.split("/")[-1]])
+            self.notify(f"Cost of checking: {cost:.4f} USD", timeout=5)
             feedback_content = response.choices[0].message.content
 
             # --- Basic Parsing ---
@@ -440,5 +471,5 @@ Format the output EXACTLY like this, using these specific headings:
             check_btn.disabled = False
 
 if __name__ == "__main__":
-    app = LanguageTutorApp()
+    app = LanguageTutorApp(excercise_types=exercise_types, excercise_definitions=definitions) 
     app.run()

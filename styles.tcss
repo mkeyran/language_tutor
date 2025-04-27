@@ -54,6 +54,19 @@ Button {
     margin-bottom: 1;
 }
 
+#exercise-display {
+    height: 15;
+    width: 100%;
+    border: round $accent;
+    margin-bottom: 1;
+}
+#hints-display {
+    height: 15;
+    width: 100%;
+    border: round $accent;
+    margin-bottom: 1;
+}
+
 /* Style the main input TextArea */
 .input-area {
     height: 20;
