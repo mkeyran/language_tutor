@@ -26,6 +26,7 @@ from language_tutor.config import (
     get_config_path,
     get_state_path,
     get_export_path,
+    get_config_dir,
 )
 from language_tutor.utils import generate_exercise, check_writing
 from language_tutor.screens import QAScreen, SettingsScreen
@@ -79,6 +80,9 @@ class LanguageTutorApp(App):
 
     def load_config(self):
         """Load selected_language and selected_level from config.json."""
+        env_path = os.path.join(get_config_dir(), ".env")
+        if os.path.exists(env_path):
+            load_dotenv(env_path)
         if os.path.exists(get_config_path()):
             try:
                 with open(get_config_path(), "r") as f:
