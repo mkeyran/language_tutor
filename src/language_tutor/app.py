@@ -200,12 +200,12 @@ class LanguageTutorApp(App):
             datetime_str = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
             export_dir = get_export_path()
             if not os.path.exists(export_dir):
-                os.makedirs(export_dir)
+                os.makedirs(export_dir) 
 
             file_path = os.path.join(
                 export_dir,
                 f"{self.selected_language}_{self.selected_exercise}_{datetime_str}.md",
-            )
+            ).replace(" ", "_").replace("/", "_")
             with open(file_path, "w") as f:
                 f.write(md)
             self.notify(f"Exported to {file_path}")

@@ -6,10 +6,12 @@ from litellm.types.utils import CostPerToken
 # --- LiteLLM model names and prices ---
 OR_MODEL_NAME = "openrouter/google/gemini-2.5-flash-preview"
 OR_MODEL_NAME_CHECK = "openrouter/google/gemini-2.5-flash-preview:thinking"
+#OR_MODEL_NAME_CHECK = "openrouter/openai/o3-mini"
 
 MODEL_PRICE_PER_TOKEN = {
     "gemini-2.5-flash-preview": CostPerToken(input_cost_per_token=0.15/1e6, output_cost_per_token=0.6/1e6),
     "gemini-2.5-flash-preview:thinking": CostPerToken(input_cost_per_token=0.15/1e6, output_cost_per_token=0.6/1e6),
+    "o3-mini": CostPerToken(input_cost_per_token=1.10/1e6, output_cost_per_token=4.40/1e6),
 }
 
 # --- Available AI models for QA feature ---
@@ -54,4 +56,9 @@ def get_state_path():
 
 def get_export_path():
     """Get the path to the export directory."""
-    return os.path.join(get_config_dir(), "export")
+    path = os.environ.get("LANGUAGE_TUTOR_EXPORT_PATH", "~/Documents/language-tutor-export")
+    if path.startswith("~"):
+        path = os.path.expanduser(path)
+    if not os.path.exists(path):
+        os.makedirs(path)
+    return path
