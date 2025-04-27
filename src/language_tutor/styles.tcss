@@ -23,6 +23,7 @@ Screen {
     height: 100%;
     border: thick $accent;
     padding: 1 2;
+    overflow-y: auto;
 }
 
 #right-pane {
@@ -31,6 +32,7 @@ Screen {
     height: 100%;
     border: thick $accent;
     padding: 1 2;
+    overflow-y: auto;
 }
 
 /* Style labels */
