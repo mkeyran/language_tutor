@@ -130,3 +130,42 @@ QAScreen {
 #send-btn, #clear-btn {
     column-span: 2;
 }
+
+/* Settings Screen Styles */
+SettingsScreen {
+    align: center middle;
+    width: 60%;
+    height: 40%;
+    background: $surface;
+    border: round $primary;
+    padding: 1 2;
+}
+
+SettingsScreen Input {
+    margin-bottom: 1;
+}
+
+SettingsScreen Button {
+    margin: 1 2;
+    width: 100%;
+}
+
+SettingsScreen Vertical {
+    align: center middle;
+    width: 100%;
+    height: auto;
+}
+
+.status-message {
+    margin-top: 2;
+    text-align: center;
+    height: 1;
+}
+
+.success {
+    color: $success;
+}
+
+.error {
+    color: $error;
+}

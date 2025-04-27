@@ -28,7 +28,7 @@ from language_tutor.config import (
     get_export_path,
 )
 from language_tutor.utils import generate_exercise, check_writing
-from language_tutor.screens import QAScreen
+from language_tutor.screens import QAScreen, SettingsScreen
 
 
 class LanguageTutorApp(App):
@@ -47,6 +47,7 @@ class LanguageTutorApp(App):
         ("ctrl+l", "load_state", "Load"),
         ("ctrl+e", "export_markdown", "Export Markdown"),
         ("ctrl+a", "open_qa_screen", "Ask AI"),
+        ("ctrl+underscore", "open_settings", "Settings"),
     ]
 
     # Use importlib.resources instead of deprecated pkg_resources
@@ -264,7 +265,7 @@ class LanguageTutorApp(App):
         self.load_config()  # Restore config on start
         if not litellm.api_key:
             self.notify(
-                "Error: OPENROUTER_API_KEY not found in .env file.",
+                "Error: OPENROUTER_API_KEY not found in .env file. Please configure it in Settings (Ctrl+,).",
                 severity="error",
                 timeout=10,
             )
@@ -363,6 +364,10 @@ class LanguageTutorApp(App):
         """Open the QA screen."""
         self.push_screen(QAScreen())
 
+    def action_open_settings(self) -> None:
+        """Open the settings screen."""
+        self.push_screen(SettingsScreen())
+
     async def action_generate_exercise(self) -> None:
         """Generate a new exercise using LiteLLM."""
         if not self.selected_language or not self.selected_exercise:
@@ -373,7 +378,8 @@ class LanguageTutorApp(App):
             return
         if not litellm.api_key:
             self.notify(
-                "API Key not configured. Cannot generate exercise.", severity="error"
+                "API Key not configured. Please set your OpenRouter API key in Settings (Ctrl+,).",
+                severity="error",
             )
             return
 
@@ -427,7 +433,8 @@ class LanguageTutorApp(App):
             return
         if not litellm.api_key:
             self.notify(
-                "API Key not configured. Cannot check writing.", severity="error"
+                "API Key not configured. Please set your OpenRouter API key in Settings (Ctrl+,).",
+                severity="error",
             )
             return
 
