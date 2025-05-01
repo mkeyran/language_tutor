@@ -1,0 +1,101 @@
+"""Settings Dialog module for language tutor application."""
+
+import os
+import json
+import litellm
+from PyQt5.QtWidgets import (
+    QDialog, QVBoxLayout, QLabel, QLineEdit, 
+    QPushButton, QHBoxLayout, QMessageBox
+)
+
+from language_tutor.config import get_config_path, get_config_dir
+
+
+class SettingsDialog(QDialog):
+    """A dialog for configuring application settings."""
+    
+    def __init__(self, parent=None):
+        """Initialize the settings dialog."""
+        super().__init__(parent)
+        
+        self.setWindowTitle("Settings")
+        self.resize(400, 150)
+        
+        self._setup_ui()
+        self._load_api_key()
+    
+    def _setup_ui(self):
+        """Set up the UI components."""
+        layout = QVBoxLayout(self)
+        
+        # API Key input
+        layout.addWidget(QLabel("OpenRouter API Key:"))
+        self.api_key_input = QLineEdit()
+        self.api_key_input.setEchoMode(QLineEdit.Password)
+        self.api_key_input.setPlaceholderText("Enter your OpenRouter API key")
+        layout.addWidget(self.api_key_input)
+        
+        # Status message
+        self.status_label = QLabel("")
+        layout.addWidget(self.status_label)
+        
+        # Buttons
+        buttons_layout = QHBoxLayout()
+        self.save_btn = QPushButton("Save")
+        self.save_btn.clicked.connect(self._on_save_clicked)
+        buttons_layout.addWidget(self.save_btn)
+        
+        self.cancel_btn = QPushButton("Cancel")
+        self.cancel_btn.clicked.connect(self.reject)
+        buttons_layout.addWidget(self.cancel_btn)
+        
+        layout.addLayout(buttons_layout)
+    
+    def _load_api_key(self):
+        """Load the API key from the .env file."""
+        try:
+            env_path = os.path.join(get_config_dir(), ".env")
+            
+            if os.path.exists(env_path):
+                # Read API key from .env file
+                with open(env_path, "r") as f:
+                    for line in f:
+                        if line.startswith("OPENROUTER_API_KEY="):
+                            api_key = line.split("=", 1)[1].strip()
+                            if api_key:
+                                # Set API key in input field
+                                self.api_key_input.setText(api_key)
+                                break
+        except Exception as e:
+            self.status_label.setText(f"Error: {str(e)}")
+    
+    def _on_save_clicked(self):
+        """Handle save button click."""
+        api_key = self.api_key_input.text()
+        
+        if not api_key:
+            QMessageBox.warning(self, "Error", "API key cannot be empty")
+            return
+        
+        try:
+            # Ensure config directory exists
+            config_dir = get_config_dir()
+            env_path = os.path.join(config_dir, ".env")
+            
+            # Create or update the .env file
+            with open(env_path, "w") as f:
+                f.write(f"OPENROUTER_API_KEY={api_key}\n")
+            
+            os.environ["OPENROUTER_API_KEY"] = api_key
+            litellm.api_key = api_key
+            
+            self.status_label.setText("API key saved successfully!")
+            self.status_label.setStyleSheet("color: green;")
+            
+            # Close the dialog after a delay
+            from PyQt5.QtCore import QTimer
+            QTimer.singleShot(1000, self.accept)
+            
+        except Exception as e:
+            self.status_label.setText(f"Error saving API key: {str(e)}")
+            self.status_label.setStyleSheet("color: red;")

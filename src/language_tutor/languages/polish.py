@@ -97,8 +97,8 @@ EXCERCISE_DEFINITIONS = {
     },
     "reklama (advertisement)": {
         "expected_length": (
-            243,
-            297,
+            36,
+            44,
         ),  # No direct example, assuming long form (Target ~270 words +/- 10%)
         "requirements": "Persuasive text designed to promote a product, service, or event. Should capture attention, highlight benefits, and include a call to action or contact information.",
     },
