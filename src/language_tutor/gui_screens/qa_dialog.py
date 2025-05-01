@@ -80,6 +80,18 @@ class QADialog(QDialog):
         self.close_btn = QPushButton("Close")
         self.close_btn.clicked.connect(self.close)
         layout.addWidget(self.close_btn)
+
+        # Keyboard shortcuts
+        self.send_shortcut = QShortcut(QKeySequence("Ctrl+Return"), self)
+        self.send_shortcut.activated.connect(self._on_send_clicked)
+        self.clear_shortcut = QShortcut(QKeySequence("Ctrl+C"), self)
+        self.clear_shortcut.activated.connect(self._on_clear_clicked)
+        self.close_shortcut = QShortcut(QKeySequence("Ctrl+W"), self)
+        self.close_shortcut.activated.connect(self.close)
+        self.question_input.setFocus()
+        self.question_input.setPlaceholderText("Type your question here...")
+        self.answer_display.setPlaceholderText("AI's answer will appear here...")
+        self.cost_display.setText("Cost: unknown")
     
     def showEvent(self, event):
         """Override showEvent to set focus to the question input when dialog is shown."""
