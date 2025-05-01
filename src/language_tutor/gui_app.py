@@ -10,10 +10,10 @@ from PyQt5.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
     QLabel, QComboBox, QPushButton, QTextEdit, 
     QSplitter, QApplication, QMessageBox, QAction,
-    QFileDialog, QStatusBar
+    QFileDialog, QStatusBar, QTabWidget, QShortcut
 )
 from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtGui import QFont, QTextDocument
+from PyQt5.QtGui import QFont, QTextDocument, QKeySequence
 
 from language_tutor.config import (
     LANGUAGES, LEVELS, 
@@ -127,6 +127,10 @@ class LanguageTutorGUI(QMainWindow):
         self.writing_input_area.textChanged.connect(self._on_writing_changed)
         self.right_layout.addWidget(self.writing_input_area)
         
+        # Add Ctrl+Enter shortcut for checking writing
+        self.check_shortcut = QShortcut(QKeySequence("Ctrl+Return"), self)
+        self.check_shortcut.activated.connect(self._on_check_clicked)
+        
         # Word count
         self.word_count_label = QLabel("Word Count: 0")
         self.right_layout.addWidget(self.word_count_label)
@@ -136,21 +140,27 @@ class LanguageTutorGUI(QMainWindow):
         self.check_btn.clicked.connect(self._on_check_clicked)
         self.right_layout.addWidget(self.check_btn)
         
-        # Feedback sections
-        self.right_layout.addWidget(QLabel("Mistakes:"))
+        
+        # Feedback sections in tabbed widget
+        self.right_layout.addWidget(QLabel("Feedback:"))
+        self.feedback_tabs = QTabWidget()
+        
+        # Mistakes tab
         self.mistakes_display = QTextEdit()
         self.mistakes_display.setReadOnly(True)
-        self.right_layout.addWidget(self.mistakes_display)
+        self.feedback_tabs.addTab(self.mistakes_display, "Mistakes")
         
-        self.right_layout.addWidget(QLabel("Stylistic Errors:"))
+        # Stylistic Errors tab
         self.style_display = QTextEdit()
         self.style_display.setReadOnly(True)
-        self.right_layout.addWidget(self.style_display)
+        self.feedback_tabs.addTab(self.style_display, "Stylistic Errors")
         
-        self.right_layout.addWidget(QLabel("Recommendations:"))
+        # Recommendations tab
         self.recs_display = QTextEdit()
         self.recs_display.setReadOnly(True)
-        self.right_layout.addWidget(self.recs_display)
+        self.feedback_tabs.addTab(self.recs_display, "Recommendations")
+        
+        self.right_layout.addWidget(self.feedback_tabs)
         
         # Add panes to splitter
         self.main_splitter.addWidget(self.left_pane)
@@ -193,7 +203,7 @@ class LanguageTutorGUI(QMainWindow):
         tools_menu = menubar.addMenu("&Tools")
         
         qa_action = QAction("&Ask AI", self)
-        qa_action.setShortcut("Ctrl+A")
+        qa_action.setShortcut("Ctrl+G")
         qa_action.triggered.connect(self.open_qa_dialog)
         tools_menu.addAction(qa_action)
         
@@ -420,6 +430,7 @@ class LanguageTutorGUI(QMainWindow):
         except Exception as e:
             QMessageBox.critical(self, "Error Checking Writing", str(e))
             self.mistakes_display.setText(f"Error: {str(e)}")
+            raise e
         finally:
             # Reset button state
             self.check_btn.setEnabled(True)

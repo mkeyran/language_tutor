@@ -5,9 +5,10 @@ import os
 import litellm
 from PyQt5.QtWidgets import (
     QDialog, QVBoxLayout, QLabel, QComboBox, 
-    QTextEdit, QPushButton, QHBoxLayout
+    QTextEdit, QPushButton, QHBoxLayout, QShortcut
 )
 from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QKeySequence
 
 from language_tutor.config import AI_MODELS, get_config_path
 from language_tutor.utils import answer_question
@@ -80,6 +81,11 @@ class QADialog(QDialog):
         self.close_btn.clicked.connect(self.close)
         layout.addWidget(self.close_btn)
     
+    def showEvent(self, event):
+        """Override showEvent to set focus to the question input when dialog is shown."""
+        super().showEvent(event)
+        self.question_input.setFocus()
+    
     def _load_config(self):
         """Load the previously selected model from config."""
         try:
@@ -125,6 +131,7 @@ class QADialog(QDialog):
         self.answer_display.clear()
         self.cost_display.setText("Cost: ")
     
+
     async def _send_question(self):
         """Send the question to the AI model."""
         question = self.question_input.toPlainText()
