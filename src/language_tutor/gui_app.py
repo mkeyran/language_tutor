@@ -19,7 +19,7 @@ from language_tutor.config import (
     LANGUAGES, LEVELS, 
     get_config_path, get_state_path, get_export_path, get_config_dir
 )
-from language_tutor.utils import generate_exercise, check_writing
+from language_tutor.utils import generate_exercise, check_writing, run_async
 from language_tutor.gui_screens import QADialog, SettingsDialog
 
 
@@ -436,39 +436,15 @@ class LanguageTutorGUI(QMainWindow):
             self.check_btn.setEnabled(True)
             self.check_btn.setText("Check Writing")
     
-    def _run_async(self, coro):
-        """Run an async coroutine from a synchronous method.
-        
-        Args:
-            coro: The coroutine to run
-        """
-        import asyncio
-        import nest_asyncio
-        
-        # Apply nest_asyncio to allow nested event loops (needed in some environments)
-        try:
-            nest_asyncio.apply()
-        except RuntimeError:
-            # If already applied or not needed, continue
-            pass
-        
-        # Get or create an event loop
-        try:
-            loop = asyncio.get_event_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-        
-        # Run the coroutine
-        return loop.run_until_complete(coro)
+
     
     def _on_generate_clicked(self):
         """Handle generate button click."""
-        self._run_async(self._generate_exercise())
+        run_async(self._generate_exercise())
     
     def _on_check_clicked(self):
         """Handle check button click."""
-        self._run_async(self._check_writing())
+        run_async(self._check_writing())
     
     def save_state(self):
         """Save the current application state."""

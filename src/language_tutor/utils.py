@@ -4,8 +4,10 @@ import re
 import random
 import litellm
 from litellm import completion_cost
-
+import asyncio
+import nest_asyncio
 from language_tutor.config import MODEL_PRICE_PER_TOKEN
+from PyQt5.QtWidgets import QApplication
 
 async def generate_exercise(language, level, exercise_type, definitions):
     """Generate a new language exercise using LiteLLM.
@@ -171,3 +173,39 @@ Please provide a helpful, educational response focused on language learning."""
     # Get the response
     answer = response.choices[0].message.content
     return answer, cost
+
+def run_async(coro, in_q_application=True):
+    """Run an async coroutine from a synchronous method without blocking UI.
+    
+    Args:
+        coro: The coroutine to run
+        in_q_application: Whether running in Qt application
+    """
+    
+    # Apply nest_asyncio to allow nested event loops
+    try:
+        nest_asyncio.apply()
+    except RuntimeError:
+        # If already applied or not needed, continue
+        pass
+    
+    # Get or create an event loop
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+    
+    # Create a future for the coroutine
+    future = asyncio.ensure_future(coro)
+    
+    # Process Qt events while waiting for the coroutine to complete
+    if in_q_application:
+        while not future.done():
+            QApplication.processEvents()
+            loop.run_until_complete(asyncio.sleep(0.01))  # Short sleep to avoid CPU hogging
+    else:
+        # If not in Qt application, just run the event loop until the coroutine is done
+        loop.run_until_complete(future)    
+    # Return the result
+    return future.result()

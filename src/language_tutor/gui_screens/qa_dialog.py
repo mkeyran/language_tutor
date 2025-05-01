@@ -12,7 +12,7 @@ from PyQt5.QtGui import QKeySequence
 
 from language_tutor.config import AI_MODELS, get_config_path
 from language_tutor.utils import answer_question
-
+from language_tutor.utils import run_async
 
 class QADialog(QDialog):
     """A dialog for asking questions to the AI model."""
@@ -195,32 +195,6 @@ class QADialog(QDialog):
             self.send_btn.setEnabled(True)
             self.send_btn.setText("Send")
     
-    def _run_async(self, coro):
-        """Run an async coroutine from a synchronous method.
-        
-        Args:
-            coro: The coroutine to run
-        """
-        import asyncio
-        import nest_asyncio
-        
-        # Apply nest_asyncio to allow nested event loops (needed in some environments)
-        try:
-            nest_asyncio.apply()
-        except RuntimeError:
-            # If already applied or not needed, continue
-            pass
-        
-        # Get or create an event loop
-        try:
-            loop = asyncio.get_event_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-        
-        # Run the coroutine
-        return loop.run_until_complete(coro)
-    
     def _on_send_clicked(self):
         """Handle send button click."""
-        self._run_async(self._send_question())
+        run_async(self._send_question())
