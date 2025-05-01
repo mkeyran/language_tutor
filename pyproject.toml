@@ -23,6 +23,8 @@ dependencies = [
 
 [project.scripts]
 language-tutor = "language_tutor.cli:main"
+language-tutor-ui = "language_tutor.gui:main"
+
 
 [project.urls]
 Homepage = "https://github.com/username/language-tutor"
