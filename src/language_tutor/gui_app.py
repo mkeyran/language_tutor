@@ -363,14 +363,14 @@ class LanguageTutorGUI(QMainWindow):
             self.generated_exercise = exercise_text
             self.generated_hints = hints
             
-            # Update TextEdits
-            self.exercise_display.setText(self.generated_exercise)
-            self.hints_display.setText(self.generated_hints)
+            # Update TextEdits with Markdown
+            self.exercise_display.setMarkdown(self.generated_exercise)
+            self.hints_display.setMarkdown(self.generated_hints)
             self.statusBar().showMessage(f"Exercise generated! Cost: {cost:.4f} USD", 5000)
             
         except Exception as e:
             QMessageBox.critical(self, "Error Generating Exercise", str(e))
-            self.exercise_display.setText(f"Error: {str(e)}")
+            self.exercise_display.setMarkdown(f"Error: {str(e)}")
         finally:
             # Reset button state
             self.generate_btn.setEnabled(True)
@@ -416,20 +416,20 @@ class LanguageTutorGUI(QMainWindow):
                 definitions=self.exercise_definitions,
             )
             
-            # Update stored values and displays
+            # Update stored values and displays with Markdown
             self.writing_mistakes = mistakes
             self.style_errors = style_errors
             self.recommendations = recommendations
             
-            self.mistakes_display.setText(self.writing_mistakes)
-            self.style_display.setText(self.style_errors)
-            self.recs_display.setText(self.recommendations)
+            self.mistakes_display.setMarkdown(self.writing_mistakes)
+            self.style_display.setMarkdown(self.style_errors)
+            self.recs_display.setMarkdown(self.recommendations)
             
             self.statusBar().showMessage(f"Feedback provided! Cost: {cost:.4f} USD", 5000)
             
         except Exception as e:
             QMessageBox.critical(self, "Error Checking Writing", str(e))
-            self.mistakes_display.setText(f"Error: {str(e)}")
+            self.mistakes_display.setMarkdown(f"Error: {str(e)}")
             raise e
         finally:
             # Reset button state
@@ -529,13 +529,13 @@ class LanguageTutorGUI(QMainWindow):
             self.style_errors = state.get("style", "")
             self.recommendations = state.get("recs", "")
             
-            # Update UI
-            self.exercise_display.setText(self.generated_exercise)
-            self.hints_display.setText(self.generated_hints)
+            # Update UI with Markdown
+            self.exercise_display.setMarkdown(self.generated_exercise)
+            self.hints_display.setMarkdown(self.generated_hints)
             self.writing_input_area.setText(self.writing_input)
-            self.mistakes_display.setText(self.writing_mistakes)
-            self.style_display.setText(self.style_errors)
-            self.recs_display.setText(self.recommendations)
+            self.mistakes_display.setMarkdown(self.writing_mistakes)
+            self.style_display.setMarkdown(self.style_errors)
+            self.recs_display.setMarkdown(self.recommendations)
             
             self.statusBar().showMessage("State loaded successfully.", 3000)
         except Exception as e:

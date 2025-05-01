@@ -164,7 +164,7 @@ class QADialog(QDialog):
         # Show loading state
         self.send_btn.setEnabled(False)
         self.send_btn.setText("Sending...")
-        self.answer_display.setText("Generating answer...")
+        self.answer_display.setMarkdown("Generating answer...")
         
         try:
             # Use utility function to get answer
@@ -174,9 +174,9 @@ class QADialog(QDialog):
                 context=self.context
             )
             
-            # Update display
+            # Update display with Markdown
             self.last_response = answer
-            self.answer_display.setText(answer)
+            self.answer_display.setMarkdown(answer)
             
             # Update cost display
             if cost:
@@ -188,7 +188,7 @@ class QADialog(QDialog):
         except Exception as e:
             from PyQt5.QtWidgets import QMessageBox
             QMessageBox.critical(self, "Error", f"Error querying AI: {str(e)}")
-            self.answer_display.setText(f"Error: {str(e)}")
+            self.answer_display.setMarkdown(f"Error: {str(e)}")
         
         finally:
             # Reset button state
