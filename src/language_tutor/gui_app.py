@@ -10,7 +10,7 @@ from PyQt5.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
     QLabel, QComboBox, QPushButton, QTextEdit, 
     QSplitter, QApplication, QMessageBox, QAction,
-    QFileDialog, QStatusBar, QTabWidget, QShortcut
+    QFileDialog, QStatusBar, QTabWidget, QShortcut, QFrame, QFormLayout, QGroupBox
 )
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QFont, QTextDocument, QKeySequence
@@ -78,71 +78,87 @@ class LanguageTutorGUI(QMainWindow):
         self.left_pane = QWidget()
         self.left_layout = QVBoxLayout(self.left_pane)
         
+        # Create a frame to group the selection widgets
+        self.selection_frame = QGroupBox()
+        selection_layout = QFormLayout(self.selection_frame)
+        selection_layout.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
+
         # Language selection
-        self.left_layout.addWidget(QLabel("Language:"))
         self.language_select = QComboBox()
         for name, code in LANGUAGES:
             self.language_select.addItem(name, code)
         self.language_select.currentIndexChanged.connect(self._on_language_changed)
-        self.left_layout.addWidget(self.language_select)
-        
+        selection_layout.addRow("Language:", self.language_select)
+
         # Level selection
-        self.left_layout.addWidget(QLabel("Level:"))
         self.level_select = QComboBox()
         for name, code in LEVELS:
             self.level_select.addItem(name, code)
         self.level_select.currentIndexChanged.connect(self._on_level_changed)
-        self.left_layout.addWidget(self.level_select)
+        selection_layout.addRow("Level:", self.level_select)
         
         # Exercise type selection
-        self.left_layout.addWidget(QLabel("Exercise Type:"))
         self.exercise_select = QComboBox()
         self.exercise_select.currentIndexChanged.connect(self._on_exercise_changed)
-        self.left_layout.addWidget(self.exercise_select)
-        
+        selection_layout.addRow("Exercise Type:", self.exercise_select)
+
         # Generate button
         self.generate_btn = QPushButton("Generate Exercise")
         self.generate_btn.clicked.connect(self._on_generate_clicked)
-        self.left_layout.addWidget(self.generate_btn)
+        selection_layout.addRow(self.generate_btn)
+        
+        # Add the frame to the main layout
+        self.left_layout.addWidget(self.selection_frame)
+        
+        # Create a frame for exercise and hints display
+        self.display_frame = QGroupBox()
+        display_layout = QVBoxLayout(self.display_frame)
         
         # Exercise display
-        self.left_layout.addWidget(QLabel("Exercise:"))
+        display_layout.addWidget(QLabel("Exercise:"))
         self.exercise_display = QTextEdit()
         self.exercise_display.setReadOnly(True)
-        self.left_layout.addWidget(self.exercise_display)
+        display_layout.addWidget(self.exercise_display)
         
         # Hints display
-        self.left_layout.addWidget(QLabel("Hints:"))
+        display_layout.addWidget(QLabel("Hints:"))
         self.hints_display = QTextEdit()
         self.hints_display.setReadOnly(True)
-        self.left_layout.addWidget(self.hints_display)
+        display_layout.addWidget(self.hints_display)
+        
+        # Add the display frame to the main layout
+        self.left_layout.addWidget(self.display_frame)
         
         # Right pane - Writing check
         self.right_pane = QWidget()
         self.right_layout = QVBoxLayout(self.right_pane)
         
         # Writing input
-        self.right_layout.addWidget(QLabel("Your Writing:"))
-        self.writing_input_area = QTextEdit()
-        self.writing_input_area.textChanged.connect(self._on_writing_changed)
-        self.right_layout.addWidget(self.writing_input_area)
+
+        self.writing_frame = QGroupBox("")
         
+        frame_layout = QVBoxLayout(self.writing_frame)
+        self.right_layout.addWidget(self.writing_frame)
+
+        self.writing_input_area = QTextEdit()
+        self.writing_input_area.setPlaceholderText("Write your text here...")
+        self.writing_input_area.textChanged.connect(self._on_writing_changed)
+        frame_layout.addWidget(self.writing_input_area)
+
+
         # Add Ctrl+Enter shortcut for checking writing
         self.check_shortcut = QShortcut(QKeySequence("Ctrl+Return"), self)
         self.check_shortcut.activated.connect(self._on_check_clicked)
         
-        # Word count
-        self.word_count_label = QLabel("Word Count: 0")
-        self.right_layout.addWidget(self.word_count_label)
-        
         # Check button
         self.check_btn = QPushButton("Check Writing")
         self.check_btn.clicked.connect(self._on_check_clicked)
-        self.right_layout.addWidget(self.check_btn)
-        
+        frame_layout.addWidget(self.check_btn)
         
         # Feedback sections in tabbed widget
-        self.right_layout.addWidget(QLabel("Feedback:"))
+        self.feedback_frame = QGroupBox("")
+        self.right_layout.addWidget(self.feedback_frame)
+        feedback_layout = QVBoxLayout(self.feedback_frame)
         self.feedback_tabs = QTabWidget()
         
         # Mistakes tab
@@ -160,15 +176,17 @@ class LanguageTutorGUI(QMainWindow):
         self.recs_display.setReadOnly(True)
         self.feedback_tabs.addTab(self.recs_display, "Recommendations")
         
-        self.right_layout.addWidget(self.feedback_tabs)
+        feedback_layout.addWidget(self.feedback_tabs)
         
         # Add panes to splitter
         self.main_splitter.addWidget(self.left_pane)
         self.main_splitter.addWidget(self.right_pane)
-        self.main_splitter.setSizes([400, 600])
+        self.main_splitter.setSizes([300, 700])
         
-        # Create status bar
+        # Create status bar with permanent word count section
         self.statusBar()
+        self.word_count_status = QLabel("Word Count: 0")
+        self.statusBar().addPermanentWidget(self.word_count_status)
     
     def _setup_menu(self):
         """Set up the application menu."""
@@ -302,24 +320,24 @@ class LanguageTutorGUI(QMainWindow):
         self._update_word_count()
     
     def _update_word_count(self):
-        """Update the word count label."""
+        """Update the word count in the status bar."""
         word_count = len(self.writing_input_area.toPlainText().split())
         
         if (not self.selected_exercise or 
             self.selected_exercise not in self.exercise_definitions):
-            self.word_count_label.setText(f"Word Count: {word_count}")
+            self.word_count_status.setText(f"Word Count: {word_count}")
         else:
             min_words = self.exercise_definitions[self.selected_exercise]['expected_length'][0]
             max_words = self.exercise_definitions[self.selected_exercise]['expected_length'][1]
             
-            self.word_count_label.setText(
+            self.word_count_status.setText(
                 f"Word Count: {word_count}, min {min_words}, max {max_words}"
             )
             
             if word_count < min_words or word_count > max_words:
-                self.word_count_label.setStyleSheet("color: red;")
+                self.word_count_status.setStyleSheet("color: red;")
             else:
-                self.word_count_label.setStyleSheet("")
+                self.word_count_status.setStyleSheet("")
     
     async def _generate_exercise(self):
         """Generate a new exercise."""
