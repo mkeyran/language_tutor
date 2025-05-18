@@ -140,14 +140,16 @@ Please check their writing. Provide feedback listing:
 3. Recommendations for improvement.
 4. Following the requirements of the exercise.
 
-For mistakes and stylistic errors, wrap the specific problematic text in <text></text> tags, followed by your explanation.
-
+For mistakes and stylistic errors, 
+wrap the specific problematic text in <text></text> tags, followed by your explanation. 
+The text should be as specific as possible, and the explanation should be clear and educational.
+Only strict grammatical mistakes should be included in the first section.
 Format the output EXACTLY like this, using these specific XML tags:
 
 <mistakes>
-- <text>problematic text from the writing</text> explanation of the grammatical error
+- <text>problematic text from the writing</text> explanation of the grammatical error. 
 - <text>another error</text> explanation
-(Or "None." if no mistakes found)
+(Or "None." if no strictly grammatical mistakes found. )
 </mistakes>
 
 <stylistic_errors>

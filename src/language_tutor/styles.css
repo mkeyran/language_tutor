@@ -1,0 +1,30 @@
+/* Error highlighting styles */
+.grammar-error {
+    background-color: rgba(255, 150, 150, 0.5);  /* More visible light red */
+    border-radius: 2px;
+    padding: 2px;
+    border-bottom: 1px dotted red;
+}
+
+.style-error {
+    background-color: rgba(150, 150, 255, 0.5);  /* More visible light blue */
+    border-radius: 2px;
+    padding: 2px;
+    border-bottom: 1px dotted blue;
+}
+
+/* Hover effects for the mistake listings */
+.mistake-item:hover {
+    background-color: #f0f0f0;
+    cursor: pointer;
+}
+
+.error-text {
+    font-weight: bold;
+    text-decoration: underline;
+}
+
+/* Make errors stand out more in the writing area */
+QTextEdit {
+    line-height: 1.5;
+}
