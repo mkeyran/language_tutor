@@ -5,6 +5,16 @@ import random
 from language_tutor.llm import llm
 from language_tutor.config import OR_MODEL_NAME
 
+# Set up logging to file
+import logging
+logging.basicConfig(
+    filename='language_tutor.log',
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+
 def extract_content_from_xml(text, tag_name, default=""):
     """Extract content from XML tags, handling potential parsing issues.
     
@@ -61,12 +71,43 @@ Optional hints go here. You can add useful phrases in addition to the hints. If 
 
     full_response_content = response.choices[0].message.content
 
+    # Log the response for debugging
+    logger.info(f"Generated exercise response: {full_response_content}")
     # Parse XML output
     exercise_text = extract_content_from_xml(full_response_content, "exercise")
     hints = extract_content_from_xml(full_response_content, "hints", "")
+    logger.info(f"Exercise text: {exercise_text}")
+    logger.info(f"Hints: {hints}")
 
     return exercise_text, hints, cost
 
+
+def extract_annotated_errors(content):
+    """Extract text references and explanations from annotated error content.
+    
+    Args:
+        content (str): Content containing <text> annotations
+        
+    Returns:
+        list: List of tuples (error_text, explanation)
+    """
+    if not content or content.lower() == "none.":
+        return []
+        
+    annotations = []
+    # Find all <text>...</text> patterns and the explanation after them
+    pattern = r"<text>(.*?)</text>\s*(.*?)(?=$|\n\s*-\s*<text>|\Z)"
+    matches = re.findall(pattern, content, re.DOTALL)
+    
+    for error_text, explanation in matches:
+        # Clean up and add to annotations list
+        error_text = error_text.strip()
+        explanation = explanation.strip()
+        if explanation.startswith('-'):
+            explanation = explanation[1:].strip()
+        annotations.append((error_text, explanation))
+    
+    return annotations
 
 async def check_writing(language, level, exercise_text, writing_input, exercise_type, definitions):
     """Check the user's writing using LiteLLM.
@@ -80,11 +121,12 @@ async def check_writing(language, level, exercise_text, writing_input, exercise_
         definitions (dict): Dictionary containing exercise definitions
 
     Returns:
-        tuple: (mistakes, style_errors, recommendations, cost)
+        tuple: (mistakes_list, style_errors_list, recommendations, cost)
+                where mistakes_list and style_errors_list are lists of (text, explanation) tuples
     """
     from language_tutor.config import OR_MODEL_NAME_CHECK
     
-    # Construct prompt for checking, asking for XML format
+    # Construct prompt for checking, asking for XML format with annotated text references
     prompt = f"""A student learning {language} was given the exercise:
 '{exercise_text}' with the following requirements:
 '{definitions[exercise_type]['requirements']}'
@@ -97,18 +139,27 @@ Please check their writing. Provide feedback listing:
 2. Stylistic errors.
 3. Recommendations for improvement.
 4. Following the requirements of the exercise.
+
+For mistakes and stylistic errors, wrap the specific problematic text in <text></text> tags, followed by your explanation.
+
 Format the output EXACTLY like this, using these specific XML tags:
 
 <mistakes>
-List of grammatical mistakes, or "None." if none found
+- <text>problematic text from the writing</text> explanation of the grammatical error
+- <text>another error</text> explanation
+(Or "None." if no mistakes found)
 </mistakes>
 
 <stylistic_errors>
-List of stylistic errors, or "None." if none found
+- <text>stylistic issue</text> explanation of the stylistic issue
+- <text>another issue</text> explanation
+- <text></text> explanation if the recommendation is applicable to the whole text
+( Or "None." if no stylistic errors found)
 </stylistic_errors>
 
 <recommendations>
-List of recommendations, or "None." if none found
+List of recommendations for improvement
+(Or "None." if no recommendations)
 </recommendations>
 """
     messages = [{"role": "user", "content": prompt}]
@@ -118,13 +169,46 @@ List of recommendations, or "None." if none found
     response, cost = await llm.completion(model=model_name, messages=messages)
     feedback_content = response.choices[0].message.content
 
+    # Log the response for debugging
+    logger.info(f"Feedback response: {feedback_content}")
+    
     # Parse XML tags
-    mistakes = extract_content_from_xml(feedback_content, "mistakes", "")
-    style_errors = extract_content_from_xml(feedback_content, "stylistic_errors", "")
+    mistakes_content = extract_content_from_xml(feedback_content, "mistakes", "")
+    style_errors_content = extract_content_from_xml(feedback_content, "stylistic_errors", "")
     recommendations = extract_content_from_xml(feedback_content, "recommendations", "")
+    
+    # Parse the annotations to get structured error data
+    mistakes_list = extract_annotated_errors(mistakes_content)
+    style_errors_list = extract_annotated_errors(style_errors_content)
 
-    return mistakes, style_errors, recommendations, cost
+    # Log the parsed results
+    logger.info(f"Mistakes list: {mistakes_list}")
+    logger.info(f"Style errors list: {style_errors_list}")
+    logger.info(f"Recommendations: {recommendations}")
 
+
+    return mistakes_list, style_errors_list, recommendations, cost
+
+def format_mistakes_list(mistakes_list):
+    """Format the mistakes list for display.
+    
+    Args:
+        mistakes_list (list): List of tuples (error_text, explanation)
+        
+    Returns:
+        str: Formatted string of mistakes
+    """
+    if not mistakes_list:
+        return "No grammatical mistakes found."
+    
+    formatted_mistakes = []
+    for error_text, explanation in mistakes_list:
+        if error_text:
+            formatted_mistakes.append(f"- {error_text}: {explanation}")
+        else:
+            formatted_mistakes.append(f"- {explanation}")
+
+    return "\n".join(formatted_mistakes)
 
 async def answer_question(model, question, context):
     """Answer a question using the specified AI model.

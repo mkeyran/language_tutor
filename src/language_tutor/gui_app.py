@@ -266,17 +266,17 @@ class LanguageTutorGUI(QMainWindow):
         file_menu = menubar.addMenu("&File")
         
         save_action = QAction("&Save State", self)
-        save_action.setShortcut("Ctrl+S")
+        save_action.setShortcut("Ctrl+Alt+S")
         save_action.triggered.connect(self.save_state)
         file_menu.addAction(save_action)
         
         load_action = QAction("&Load State", self)
-        load_action.setShortcut("Ctrl+L")
+        load_action.setShortcut("Ctrl+Alt+L")
         load_action.triggered.connect(self.load_state)
         file_menu.addAction(load_action)
         
         export_action = QAction("&Export Markdown", self)
-        export_action.setShortcut("Ctrl+E")
+        export_action.setShortcut("Ctrl+Alt+E")
         export_action.triggered.connect(self.export_markdown)
         file_menu.addAction(export_action)
         
@@ -505,8 +505,8 @@ class LanguageTutorGUI(QMainWindow):
             )
             
             # Update stored values and displays with Markdown
-            self.writing_mistakes = mistakes
-            self.style_errors = style_errors
+            self.writing_mistakes = format_mistakes_list(mistakes)
+            self.style_errors = format_mistakes_list(style_errors)
             self.recommendations = recommendations
             
             self.mistakes_display.setMarkdown(self.writing_mistakes)
