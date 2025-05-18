@@ -143,7 +143,8 @@ Please check their writing. Provide feedback listing:
 For mistakes and stylistic errors, 
 wrap the specific problematic text in <text></text> tags, followed by your explanation. 
 The text should be as specific as possible, and the explanation should be clear and educational.
-Only strict grammatical mistakes should be included in the first section.
+Only strict grammatical mistakes should be included in the <mistakes> section. 
+No recommendations or stylistic errors should be included in the <mistakes> section.
 Format the output EXACTLY like this, using these specific XML tags:
 
 <mistakes>
