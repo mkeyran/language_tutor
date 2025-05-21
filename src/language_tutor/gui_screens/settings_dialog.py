@@ -2,7 +2,7 @@
 
 import os
 import json
-from language_tutor import llm
+from language_tutor.llm import llm
 from PyQt5.QtWidgets import (
     QDialog, QVBoxLayout, QLabel, QLineEdit, 
     QPushButton, QHBoxLayout, QMessageBox

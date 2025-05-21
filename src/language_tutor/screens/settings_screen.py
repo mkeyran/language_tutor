@@ -2,7 +2,7 @@
 
 import json
 import os
-from language_tutor import llm
+from language_tutor.llm import llm
 
 from pathlib import Path
 import asyncio
