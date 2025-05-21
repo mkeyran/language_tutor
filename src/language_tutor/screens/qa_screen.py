@@ -9,7 +9,7 @@ from textual.widgets import Button, Select, Static, TextArea, Markdown, Footer, 
 from textual.binding import Binding
 from language_tutor.config import AI_MODELS
 from language_tutor.utils import answer_question
-from language_tutor import llm
+from language_tutor.llm import llm
 
 
 class QuestionTextArea(TextArea):

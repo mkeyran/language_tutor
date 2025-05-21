@@ -4,7 +4,7 @@ import os
 import json
 import random
 import datetime
-from language_tutor import llm
+from language_tutor.llm import llm
 from dotenv import load_dotenv
 from PyQt5.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 

@@ -6,7 +6,7 @@ import os
 import random
 import importlib.resources as resources
 from dotenv import load_dotenv
-from language_tutor import llm
+from language_tutor.llm import llm
 from textual.app import App, ComposeResult
 from textual.containers import Container, Horizontal, Vertical
 from textual.widgets import (

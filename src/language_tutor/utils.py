@@ -4,7 +4,7 @@ import re
 import random
 import asyncio
 import nest_asyncio
-from language_tutor import llm
+from language_tutor.llm import llm
 from PyQt5.QtWidgets import QApplication
 
 async def generate_exercise(language, level, exercise_type, definitions):
