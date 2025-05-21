@@ -9,6 +9,7 @@ from textual.widgets import Button, Select, Static, TextArea, Markdown, Footer, 
 from textual.binding import Binding
 from language_tutor.config import AI_MODELS
 from language_tutor.utils import answer_question
+from language_tutor import llm
 
 
 class QuestionTextArea(TextArea):
@@ -121,9 +122,7 @@ class QAScreen(Screen):
             self.app.notify("Please enter a question first.", severity="warning")
             return
 
-        import litellm
-
-        if not litellm.api_key:
+        if not llm.is_configured():
             self.app.notify(
                 "API Key not configured. Cannot send question.", severity="error"
             )

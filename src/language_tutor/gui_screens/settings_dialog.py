@@ -2,7 +2,7 @@
 
 import os
 import json
-import litellm
+from language_tutor import llm
 from PyQt5.QtWidgets import (
     QDialog, QVBoxLayout, QLabel, QLineEdit, 
     QPushButton, QHBoxLayout, QMessageBox
@@ -87,7 +87,7 @@ class SettingsDialog(QDialog):
                 f.write(f"OPENROUTER_API_KEY={api_key}\n")
             
             os.environ["OPENROUTER_API_KEY"] = api_key
-            litellm.api_key = api_key
+            llm.set_api_key(api_key)
             
             self.status_label.setText("API key saved successfully!")
             self.status_label.setStyleSheet("color: green;")

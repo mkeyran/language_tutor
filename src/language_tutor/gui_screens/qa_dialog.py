@@ -2,7 +2,7 @@
 
 import json
 import os
-import litellm
+from language_tutor import llm
 from PyQt5.QtWidgets import (
     QDialog,
     QVBoxLayout,
@@ -157,7 +157,7 @@ class QADialog(QDialog):
             )
             return
 
-        if not litellm.api_key:
+        if not llm.is_configured():
             from PyQt5.QtWidgets import QMessageBox
 
             QMessageBox.critical(

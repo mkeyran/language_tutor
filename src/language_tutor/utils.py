@@ -2,11 +2,9 @@
 
 import re
 import random
-import litellm
-from litellm import completion_cost
 import asyncio
 import nest_asyncio
-from language_tutor.config import MODEL_PRICE_PER_TOKEN
+from language_tutor import llm
 from PyQt5.QtWidgets import QApplication
 
 async def generate_exercise(language, level, exercise_type, definitions):
@@ -42,8 +40,7 @@ Format the output EXACTLY like this, using these specific headings:
     messages = [{"role": "user", "content": prompt}]
 
     # Make the async API call
-    response = await litellm.acompletion(model=OR_MODEL_NAME, messages=messages, api_base=litellm.base_url)
-    cost = completion_cost(response, custom_cost_per_token=MODEL_PRICE_PER_TOKEN[OR_MODEL_NAME.split("/")[-1]])
+    response, cost = await llm.completion(model=OR_MODEL_NAME, messages=messages)
 
     full_response_content = response.choices[0].message.content
 
@@ -112,8 +109,7 @@ Format the output EXACTLY like this, using these specific headings:
     model_name = OR_MODEL_NAME_CHECK
 
     # Make the async API call
-    response = await litellm.acompletion(model=model_name, messages=messages, api_base=litellm.base_url)
-    cost = completion_cost(response, custom_cost_per_token=MODEL_PRICE_PER_TOKEN[model_name.split("/")[-1]])
+    response, cost = await llm.completion(model=model_name, messages=messages)
     feedback_content = response.choices[0].message.content
 
     # --- Basic Parsing ---
@@ -157,18 +153,7 @@ Please provide a helpful, educational response focused on language learning."""
     
     # Make the API call
     messages = [{"role": "user", "content": prompt}]
-    response = await litellm.acompletion(
-        model=model, 
-        messages=messages, 
-        api_base=litellm.base_url
-    )
-    
-    # Try to calculate cost
-    model_name = model.split("/")[-1].split(":")[0]
-    if model_name in MODEL_PRICE_PER_TOKEN:
-        cost = completion_cost(response, custom_cost_per_token=MODEL_PRICE_PER_TOKEN[model_name])
-    else:
-        cost = None
+    response, cost = await llm.completion(model=model, messages=messages)
     
     # Get the response
     answer = response.choices[0].message.content
