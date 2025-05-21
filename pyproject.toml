@@ -37,6 +37,7 @@ packages = [
     "language_tutor.languages",
     "language_tutor.gui_screens",
     "language_tutor.screens",
+    "language_tutor.llms",
 ]
 
 [dependency-groups]
