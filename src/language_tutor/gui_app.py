@@ -21,6 +21,7 @@ from language_tutor.config import (
 )
 from language_tutor.utils import generate_exercise, check_writing, run_async
 from language_tutor.gui_screens import QADialog, SettingsDialog
+from language_tutor.state import LanguageTutorState
 
 
 class LanguageTutorGUI(QMainWindow):
@@ -34,18 +35,13 @@ class LanguageTutorGUI(QMainWindow):
         self.exercise_definitions_all = exercise_definitions
         self.exercise_definitions = {}
         self.exercise_types = []
-        
-        # Initialize state variables
-        self.selected_language = ""
-        self.selected_exercise = ""
-        self.selected_level = ""
-        self.generated_exercise = ""
-        self.generated_hints = ""
-        self.writing_mistakes = ""
-        self.style_errors = ""
-        self.recommendations = ""
-        self.writing_input = ""
-        
+
+        # Centralize application state
+        self.state = LanguageTutorState()
+
+        # Convenience aliases to keep code readable
+        # Access state fields via properties defined below
+
         # Set up the UI
         self.setWindowTitle("Language Tutor")
         self.resize(1000, 700)
@@ -67,6 +63,79 @@ class LanguageTutorGUI(QMainWindow):
                 "Error: API Key not configured. Please configure it in Settings.",
                 10000
             )
+
+    # --- State property helpers ---
+    @property
+    def selected_language(self) -> str:
+        return self.state.selected_language
+
+    @selected_language.setter
+    def selected_language(self, value: str) -> None:
+        self.state.selected_language = value
+
+    @property
+    def selected_exercise(self) -> str:
+        return self.state.selected_exercise
+
+    @selected_exercise.setter
+    def selected_exercise(self, value: str) -> None:
+        self.state.selected_exercise = value
+
+    @property
+    def selected_level(self) -> str:
+        return self.state.selected_level
+
+    @selected_level.setter
+    def selected_level(self, value: str) -> None:
+        self.state.selected_level = value
+
+    @property
+    def generated_exercise(self) -> str:
+        return self.state.generated_exercise
+
+    @generated_exercise.setter
+    def generated_exercise(self, value: str) -> None:
+        self.state.generated_exercise = value
+
+    @property
+    def generated_hints(self) -> str:
+        return self.state.generated_hints
+
+    @generated_hints.setter
+    def generated_hints(self, value: str) -> None:
+        self.state.generated_hints = value
+
+    @property
+    def writing_mistakes(self) -> str:
+        return self.state.writing_mistakes
+
+    @writing_mistakes.setter
+    def writing_mistakes(self, value: str) -> None:
+        self.state.writing_mistakes = value
+
+    @property
+    def style_errors(self) -> str:
+        return self.state.style_errors
+
+    @style_errors.setter
+    def style_errors(self, value: str) -> None:
+        self.state.style_errors = value
+
+    @property
+    def recommendations(self) -> str:
+        return self.state.recommendations
+
+    @recommendations.setter
+    def recommendations(self, value: str) -> None:
+        self.state.recommendations = value
+
+    @property
+    def writing_input(self) -> str:
+        return self.state.writing_input
+
+    @writing_input.setter
+    def writing_input(self, value: str) -> None:
+        self.state.writing_input = value
     
     def _setup_ui(self):
         """Set up the main UI components."""
@@ -467,19 +536,7 @@ class LanguageTutorGUI(QMainWindow):
     def save_state(self):
         """Save the current application state."""
         try:
-            state = {
-                "selected_language": self.selected_language,
-                "selected_exercise": self.selected_exercise,
-                "selected_level": self.selected_level,
-                "generated_exercise": self.generated_exercise,
-                "generated_hints": self.generated_hints,
-                "writing_input": self.writing_input,
-                "mistakes": self.writing_mistakes,
-                "style": self.style_errors,
-                "recs": self.recommendations,
-            }
-            with open(get_state_path(), "w") as f:
-                json.dump(state, f)
+            self.state.save()
             self.statusBar().showMessage("State saved successfully.", 3000)
         except Exception as e:
             QMessageBox.critical(self, "Error Saving State", str(e))
@@ -489,39 +546,39 @@ class LanguageTutorGUI(QMainWindow):
         if not os.path.exists(get_state_path()):
             self.statusBar().showMessage("No saved state found.", 3000)
             return
-            
+
         try:
-            with open(get_state_path(), "r") as f:
-                state = json.load(f)
+            state = LanguageTutorState.load()
+            self.state = state
             
             # Restore language first (this will reload definitions)
-            lang = state.get("selected_language", "")
+            lang = state.selected_language
             if lang:
                 index = next((i for i, item in enumerate(LANGUAGES) if item[1] == lang), -1)
                 if index >= 0:
                     self.language_select.setCurrentIndex(index)
-            
+
             # Restore level
-            level = state.get("selected_level", "")
+            level = state.selected_level
             if level:
                 index = next((i for i, item in enumerate(LEVELS) if item[1] == level), -1)
                 if index >= 0:
                     self.level_select.setCurrentIndex(index)
-            
+
             # Restore exercise type
-            exercise = state.get("selected_exercise", "")
+            exercise = state.selected_exercise
             if exercise:
                 index = self.exercise_select.findText(exercise)
                 if index >= 0:
                     self.exercise_select.setCurrentIndex(index)
-            
+
             # Restore content
-            self.generated_exercise = state.get("generated_exercise", "")
-            self.generated_hints = state.get("generated_hints", "")
-            self.writing_input = state.get("writing_input", "")
-            self.writing_mistakes = state.get("mistakes", "")
-            self.style_errors = state.get("style", "")
-            self.recommendations = state.get("recs", "")
+            self.generated_exercise = state.generated_exercise
+            self.generated_hints = state.generated_hints
+            self.writing_input = state.writing_input
+            self.writing_mistakes = state.writing_mistakes
+            self.style_errors = state.style_errors
+            self.recommendations = state.recommendations
             
             # Update UI with Markdown
             self.exercise_display.setMarkdown(self.generated_exercise)
@@ -538,37 +595,7 @@ class LanguageTutorGUI(QMainWindow):
     def export_markdown(self):
         """Export the current exercise, writing, and feedback to a Markdown file."""
         try:
-            exercise = self.generated_exercise or ""
-            hints = self.generated_hints or ""
-            writing = self.writing_input or ""
-            mistakes = self.writing_mistakes or ""
-            style = self.style_errors or ""
-            recs = self.recommendations or ""
-            
-            md = f"""# Language Tutor Export
-
-**Language:** {self.selected_language}
-**Level:** {self.selected_level}
-**Exercise Type:** {self.selected_exercise}
-
-## Exercise
-{exercise}
-
-## Hints
-{hints if hints else "None."}
-
-## Your Writing
-{writing}
-
-## Mistakes
-{mistakes if mistakes else "None."}
-
-## Stylistic Errors
-{style if style else "None."}
-
-## Recommendations
-{recs if recs else "None."}
-"""
+            md = self.state.to_markdown()
             
             datetime_str = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
             export_dir = get_export_path()
