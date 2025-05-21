@@ -54,7 +54,9 @@ class FeedbackHandler:
             if hasattr(widget.__class__, "mouseMoveEvent"):
                 widget.__class__.mouseMoveEvent(widget, event)
 
-            errors = self.grammar_errors if error_type == "grammar" else self.style_errors
+            errors = (
+                self.grammar_errors if error_type == "grammar" else self.style_errors
+            )
             for error_text, _ in errors:
                 if error_text and error_text in line:
                     self.highlight_error(error_text, error_type)
@@ -150,9 +152,12 @@ def format_mistakes_with_hover(mistakes, mistakes_type):
     </style>
     """
     cursor.insertHtml(css)
+
     for error_text, explanation in mistakes:
         if error_text:
-            class_name = "grammar-error" if mistakes_type == "grammar" else "style-error"
+            class_name = (
+                "grammar-error" if mistakes_type == "grammar" else "style-error"
+            )
             formatted_error = f'<span class="{class_name}">{error_text}</span>'
-            cursor.insertHtml(f"{formatted_error}: {explanation}<br>")
+            cursor.insertHtml(f"<div> - {formatted_error}: {explanation}</div><br>")
     return doc.toHtml()
