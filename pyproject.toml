@@ -32,7 +32,12 @@ Issues = "https://github.com/username/language-tutor/issues"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
-packages = ["language_tutor", "language_tutor.languages"]
+packages = [
+    "language_tutor",
+    "language_tutor.languages",
+    "language_tutor.gui_screens",
+    "language_tutor.screens",
+]
 
 [dependency-groups]
 dev = [
