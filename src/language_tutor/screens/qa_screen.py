@@ -8,7 +8,7 @@ from textual.screen import Screen
 from textual.widgets import Button, Select, Static, TextArea, Markdown, Footer, Header
 from textual.binding import Binding
 from language_tutor.config import AI_MODELS
-from language_tutor.utils import answer_question
+from language_tutor.qa import answer_question
 from language_tutor.llm import llm
 
 

@@ -1,5 +1,5 @@
 import asyncio
-from language_tutor import utils
+from language_tutor.async_runner import run_async
 
 
 async def _dummy():
@@ -8,5 +8,5 @@ async def _dummy():
 
 
 def test_run_async():
-    result = utils.run_async(_dummy(), in_q_application=False)
+    result = run_async(_dummy(), in_q_application=False)
     assert result == 42

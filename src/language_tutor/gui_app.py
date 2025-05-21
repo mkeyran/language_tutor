@@ -19,7 +19,8 @@ from language_tutor.config import (
     LANGUAGES, LEVELS, 
     get_config_path, get_state_path, get_export_path, get_config_dir
 )
-from language_tutor.utils import generate_exercise, check_writing, run_async
+from language_tutor.exercise import generate_exercise, check_writing
+from language_tutor.async_runner import run_async
 from language_tutor.gui_screens import QADialog, SettingsDialog
 from language_tutor.state import LanguageTutorState
 

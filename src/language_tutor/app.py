@@ -29,7 +29,7 @@ from language_tutor.config import (
     get_export_path,
     get_config_dir,
 )
-from language_tutor.utils import generate_exercise, check_writing
+from language_tutor.exercise import generate_exercise, check_writing
 from language_tutor.screens import QAScreen, SettingsScreen
 
 

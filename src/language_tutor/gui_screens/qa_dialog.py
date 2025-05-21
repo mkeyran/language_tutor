@@ -17,8 +17,8 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QKeySequence
 
 from language_tutor.config import AI_MODELS, get_config_path
-from language_tutor.utils import answer_question
-from language_tutor.utils import run_async
+from language_tutor.qa import answer_question
+from language_tutor.async_runner import run_async
 
 
 class QADialog(QDialog):
