@@ -23,499 +23,8 @@ from language_tutor.exercise import generate_exercise, check_writing
 from language_tutor.async_runner import run_async
 from language_tutor.gui_screens import QADialog, SettingsDialog
 from language_tutor.state import LanguageTutorState
+from language_tutor.feedback_handler import FeedbackHandler, format_mistakes_with_hover
 
-# Create a new class for handling the interactive feedback
-class FeedbackHandler:
-    """Handles the interactive feedback highlighting between mistakes and text."""
-    
-    def __init__(self, writing_input, mistakes_display, style_display):
-        """Initialize with the text widgets to connect.
-        
-        Args:
-            writing_input (QTextEdit): The writing input text editor
-            mistakes_display (QTextEdit): The grammatical mistakes display
-            style_display (QTextEdit): The stylistic errors display
-        """
-        self.writing_input = writing_input
-        self.mistakes_display = mistakes_display
-        self.style_display = style_display
-        
-        self.grammar_errors = []
-        self.style_errors = []
-        self.original_text = ""
-        self.current_highlighted_error = None
-        
-        # Store original stylesheet for restoration
-        self.original_stylesheet = self.writing_input.styleSheet()
-        
-        # Create CSS rules for error highlighting
-        self.grammar_highlight_style = """
-        .grammar-error {
-            background-color: rgba(255, 200, 200, 0.5); /* Light red */
-        }
-        """
-        self.style_highlight_style = """
-        .style-error {
-            background-color: rgba(200, 200, 255, 0.5); /* Light blue */
-        }
-        """
-        
-        # Set up event handlers for hover
-        # We need to create methods that preserve 'self' reference
-        self.mistakes_display.mouseMoveEvent = self._create_hover_handler(self.mistakes_display, "grammar")
-        self.mistakes_display.leaveEvent = self._create_leave_handler()
-        
-        self.style_display.mouseMoveEvent = self._create_hover_handler(self.style_display, "style")
-        self.style_display.leaveEvent = self._create_leave_handler()
-    
-    def update_errors(self, grammar_errors, style_errors, text):
-        """Update the stored errors and original text.
-        
-        Args:
-            grammar_errors (list): List of (error_text, explanation) tuples
-            style_errors (list): List of (error_text, explanation) tuples
-            text (str): The original text content
-        """
-        self.grammar_errors = grammar_errors
-        self.style_errors = style_errors
-        self.original_text = text
-        
-        # Reset any highlighting
-        self.restore_original_text()
-    
-    def _create_hover_handler(self, widget, error_type):
-        """Create a hover event handler function.
-        
-        Returns:
-            function: A function to handle hover events
-        """
-        def hover_handler(event):
-            # Get the cursor position
-            cursor = widget.cursorForPosition(event.pos())
-            cursor.select(QTextCursor.BlockUnderCursor)
-            line = cursor.selectedText()
-            
-            # First call the original event handler
-            if hasattr(widget.__class__, 'mouseMoveEvent'):
-                widget.__class__.mouseMoveEvent(widget, event)
-            
-            # Check if line contains any error
-            errors = self.grammar_errors if error_type == "grammar" else self.style_errors
-            
-            for error_text, _ in errors:
-                if error_text and error_text in line:
-                    self.highlight_error(error_text, error_type)
-                    return
-            
-            # If we're here, we're not hovering over any error line
-            if self.current_highlighted_error:
-                self.restore_original_text()
-                
-        return hover_handler
-    
-    def _create_leave_handler(self):
-        """Create a leave event handler function.
-        
-        Returns:
-            function: A function to handle leave events
-        """
-        def leave_handler(event):
-            # First call the original event handler
-            if hasattr(self.mistakes_display.__class__, 'leaveEvent'):
-                self.mistakes_display.__class__.leaveEvent(self.mistakes_display, event)
-            
-            # Remove highlighting
-            self.restore_original_text()
-            
-        return leave_handler
-    
-    def highlight_error(self, error_text, error_type):
-        """Highlight the error in the writing input.
-            
-        Args:
-            error_text (str): The text of the error to highlight
-            error_type (str): Type of error ("grammar" or "style")
-        """
-
-        if not error_text:
-            return
-        
-        # Save current error for reference
-        self.current_highlighted_error = (error_text, error_type)
-        
-        # Get current scrollbar position and cursor position
-        scrollbar_pos = self.writing_input.verticalScrollBar().value()
-        cursor_pos = self.writing_input.textCursor().position()
-        
-        # Apply styling based on error type
-        bg_color = "#ffcccc" if error_type == "grammar" else "#ccccff"
-        
-        # Use the separate function to find and highlight the error
-        processed_text = self._find_and_highlight_error(
-            original_text=self.original_text,
-            error_text=error_text,
-            bg_color=bg_color
-        )
-        
-        # Set the markdown with HTML for highlighting
-        self.writing_input.setHtml(processed_text)
-        
-        # Restore cursor position and scroll position
-        cursor = self.writing_input.textCursor()
-        cursor.setPosition(min(cursor_pos, len(self.original_text)))
-        self.writing_input.setTextCursor(cursor)
-        self.writing_input.verticalScrollBar().setValue(scrollbar_pos)
-
-    def _find_and_highlight_error(self, original_text, error_text, bg_color):
-        """Find and highlight an error in text using efficient search algorithms.
-        
-        Args:
-            original_text (str): The original text to search in
-            error_text (str): The error text to find and highlight
-            bg_color (str): HTML color code for highlighting
-            
-        Returns:
-            str: HTML text with highlighting for the error
-        """
-        # Create a temporary QTextDocument to use Qt's search functionality
-        doc = QTextDocument()
-        doc.setHtml(original_text)
-        
-        # Process the error text to make it more robust for searching
-        # Remove consecutive whitespace and normalize
-        search_error = ' '.join(error_text.split())
-        
-        # Create options for the search - case sensitive, no whole words only
-        search_options = QTextDocument.FindCaseSensitively
-        
-        # Start the cursor at the beginning of the document
-        cursor = QTextCursor(doc)
-        
-        # Find the first occurrence
-        cursor = doc.find(search_error, cursor, search_options)
-        
-        # If not found with exact search, try with relaxed whitespace
-        if cursor.isNull():
-            # Try with word boundaries - might be better for partial matches
-            cursor = QTextCursor(doc)
-            relaxed_error = r'\b' + r'\b\s+\b'.join(search_error.split()) + r'\b'
-            
-            # Use a more flexible regex-based search
-            import re
-            pattern = re.compile(relaxed_error, re.IGNORECASE)
-            text = doc.toPlainText()
-            match = pattern.search(text)
-            
-            if match:
-                # Position the cursor at the match
-                cursor = QTextCursor(doc)
-                cursor.setPosition(match.start())
-                cursor.setPosition(match.end(), QTextCursor.KeepAnchor)
-        
-        # If we found a match, apply highlighting
-        if not cursor.isNull():
-            # Create a character format for highlighting
-            format = cursor.charFormat()
-            format.setBackground(QColor(bg_color))
-            cursor.setCharFormat(format)
-            
-            # Return the HTML with highlighting
-            return doc.toHtml()
-        
-        # If no match found, return the original text
-        return original_text
-    
-    def restore_original_text(self):
-        """Restore the original text without highlighting."""
-        if not self.original_text or not self.current_highlighted_error:
-            return
-            
-        # Get current scroll and cursor position
-        scrollbar_pos = self.writing_input.verticalScrollBar().value()
-        cursor_pos = self.writing_input.textCursor().position()
-        
-        # Restore original text
-        self.writing_input.setHtml(self.original_text)
-        
-        # Restore cursor and scroll position
-        cursor = self.writing_input.textCursor()
-        cursor.setPosition(min(cursor_pos, len(self.original_text)))
-        self.writing_input.setTextCursor(cursor)
-        self.writing_input.verticalScrollBar().setValue(scrollbar_pos)
-        
-        # Clear current highlight reference
-        self.current_highlighted_error = None
-
-# Create a new class for handling the interactive feedback
-class FeedbackHandler:
-    """Handles the interactive feedback highlighting between mistakes and text."""
-    
-    def __init__(self, writing_input, mistakes_display, style_display):
-        """Initialize with the text widgets to connect.
-        
-        Args:
-            writing_input (QTextEdit): The writing input text editor
-            mistakes_display (QTextEdit): The grammatical mistakes display
-            style_display (QTextEdit): The stylistic errors display
-        """
-        self.writing_input = writing_input
-        self.mistakes_display = mistakes_display
-        self.style_display = style_display
-        
-        self.grammar_errors = []
-        self.style_errors = []
-        self.original_text = ""
-        self.current_highlighted_error = None
-        
-        # Store original stylesheet for restoration
-        self.original_stylesheet = self.writing_input.styleSheet()
-        
-        # Create CSS rules for error highlighting
-        self.grammar_highlight_style = """
-        .grammar-error {
-            background-color: rgba(255, 200, 200, 0.5); /* Light red */
-        }
-        """
-        self.style_highlight_style = """
-        .style-error {
-            background-color: rgba(200, 200, 255, 0.5); /* Light blue */
-        }
-        """
-        
-        # Set up event handlers for hover
-        # We need to create methods that preserve 'self' reference
-        self.mistakes_display.mouseMoveEvent = self._create_hover_handler(self.mistakes_display, "grammar")
-        self.mistakes_display.leaveEvent = self._create_leave_handler()
-        
-        self.style_display.mouseMoveEvent = self._create_hover_handler(self.style_display, "style")
-        self.style_display.leaveEvent = self._create_leave_handler()
-    
-    def update_errors(self, grammar_errors, style_errors, text):
-        """Update the stored errors and original text.
-        
-        Args:
-            grammar_errors (list): List of (error_text, explanation) tuples
-            style_errors (list): List of (error_text, explanation) tuples
-            text (str): The original text content
-        """
-        self.grammar_errors = grammar_errors
-        self.style_errors = style_errors
-        self.original_text = text
-        
-        # Reset any highlighting
-        self.restore_original_text()
-    
-    def _create_hover_handler(self, widget, error_type):
-        """Create a hover event handler function.
-        
-        Returns:
-            function: A function to handle hover events
-        """
-        def hover_handler(event):
-            # Get the cursor position
-            cursor = widget.cursorForPosition(event.pos())
-            cursor.select(QTextCursor.BlockUnderCursor)
-            line = cursor.selectedText()
-            
-            # First call the original event handler
-            if hasattr(widget.__class__, 'mouseMoveEvent'):
-                widget.__class__.mouseMoveEvent(widget, event)
-            
-            # Check if line contains any error
-            errors = self.grammar_errors if error_type == "grammar" else self.style_errors
-            
-            for error_text, _ in errors:
-                if error_text and error_text in line:
-                    self.highlight_error(error_text, error_type)
-                    return
-            
-            # If we're here, we're not hovering over any error line
-            if self.current_highlighted_error:
-                self.restore_original_text()
-                
-        return hover_handler
-    
-    def _create_leave_handler(self):
-        """Create a leave event handler function.
-        
-        Returns:
-            function: A function to handle leave events
-        """
-        def leave_handler(event):
-            # First call the original event handler
-            if hasattr(self.mistakes_display.__class__, 'leaveEvent'):
-                self.mistakes_display.__class__.leaveEvent(self.mistakes_display, event)
-            
-            # Remove highlighting
-            self.restore_original_text()
-            
-        return leave_handler
-    
-    def highlight_error(self, error_text, error_type):
-        """Highlight the error in the writing input.
-            
-        Args:
-            error_text (str): The text of the error to highlight
-            error_type (str): Type of error ("grammar" or "style")
-        """
-
-        if not error_text:
-            return
-        
-        # Save current error for reference
-        self.current_highlighted_error = (error_text, error_type)
-        
-        # Get current scrollbar position and cursor position
-        scrollbar_pos = self.writing_input.verticalScrollBar().value()
-        cursor_pos = self.writing_input.textCursor().position()
-        
-        # Apply styling based on error type
-        bg_color = "#ffcccc" if error_type == "grammar" else "#ccccff"
-        
-        # Use the separate function to find and highlight the error
-        processed_text = self._find_and_highlight_error(
-            original_text=self.original_text,
-            error_text=error_text,
-            bg_color=bg_color
-        )
-        
-        # Set the markdown with HTML for highlighting
-        self.writing_input.setHtml(processed_text)
-        
-        # Restore cursor position and scroll position
-        cursor = self.writing_input.textCursor()
-        cursor.setPosition(min(cursor_pos, len(self.original_text)))
-        self.writing_input.setTextCursor(cursor)
-        self.writing_input.verticalScrollBar().setValue(scrollbar_pos)
-
-    def _find_and_highlight_error(self, original_text, error_text, bg_color):
-        """Find and highlight an error in text using efficient search algorithms.
-        
-        Args:
-            original_text (str): The original text to search in
-            error_text (str): The error text to find and highlight
-            bg_color (str): HTML color code for highlighting
-            
-        Returns:
-            str: HTML text with highlighting for the error
-        """
-        # Create a temporary QTextDocument to use Qt's search functionality
-        doc = QTextDocument()
-        doc.setHtml(original_text)
-        
-        # Process the error text to make it more robust for searching
-        # Remove consecutive whitespace and normalize
-        search_error = ' '.join(error_text.split())
-        
-        # Create options for the search - case sensitive, no whole words only
-        search_options = QTextDocument.FindCaseSensitively
-        
-        # Start the cursor at the beginning of the document
-        cursor = QTextCursor(doc)
-        
-        # Find the first occurrence
-        cursor = doc.find(search_error, cursor, search_options)
-        
-        # If not found with exact search, try with relaxed whitespace
-        if cursor.isNull():
-            # Try with word boundaries - might be better for partial matches
-            cursor = QTextCursor(doc)
-            relaxed_error = r'\b' + r'\b\s+\b'.join(search_error.split()) + r'\b'
-            
-            # Use a more flexible regex-based search
-            import re
-            pattern = re.compile(relaxed_error, re.IGNORECASE)
-            text = doc.toPlainText()
-            match = pattern.search(text)
-            
-            if match:
-                # Position the cursor at the match
-                cursor = QTextCursor(doc)
-                cursor.setPosition(match.start())
-                cursor.setPosition(match.end(), QTextCursor.KeepAnchor)
-        
-        # If we found a match, apply highlighting
-        if not cursor.isNull():
-            # Create a character format for highlighting
-            format = cursor.charFormat()
-            format.setBackground(QColor(bg_color))
-            cursor.setCharFormat(format)
-            
-            # Return the HTML with highlighting
-            return doc.toHtml()
-        
-        # If no match found, return the original text
-        return original_text
-    
-    def restore_original_text(self):
-        """Restore the original text without highlighting."""
-        if not self.original_text or not self.current_highlighted_error:
-            return
-            
-        # Get current scroll and cursor position
-        scrollbar_pos = self.writing_input.verticalScrollBar().value()
-        cursor_pos = self.writing_input.textCursor().position()
-        
-        # Restore original text
-        self.writing_input.setHtml(self.original_text)
-        
-        # Restore cursor and scroll position
-        cursor = self.writing_input.textCursor()
-        cursor.setPosition(min(cursor_pos, len(self.original_text)))
-        self.writing_input.setTextCursor(cursor)
-        self.writing_input.verticalScrollBar().setValue(scrollbar_pos)
-        
-        # Clear current highlight reference
-        self.current_highlighted_error = None
-
-
-def format_mistakes_with_hover(mistakes, mistakes_type):
-    """Format mistakes with hover functionality.
-    
-    Args:
-        mistakes (list): List of (error_text, explanation) tuples
-        mistakes_type (str): Type of mistakes ("grammar" or "style")
-        
-    Returns:
-        str: Formatted HTML string with hover functionality
-    """
-    if not mistakes:
-        return "No mistakes found."
-    
-    # Create a QTextDocument to format the text
-    doc = QTextDocument()
-    
-    # Create a QTextCursor to insert text
-    cursor = QTextCursor(doc)
-    
-    # Set the default font for the document
-    font = QFont("Arial", 12)
-    doc.setDefaultFont(font)
-    
-    # Add CSS for highlighting
-    css = """
-    <style>
-        .grammar-error {
-            background-color: rgba(255, 200, 200, 0.5); /* Light red */
-        }
-        .style-error {
-            background-color: rgba(200, 200, 255, 0.5); /* Light blue */
-        }
-    </style>
-    """
-    
-    # Insert CSS into the document
-    cursor.insertHtml(css)
-    
-    # Iterate through the mistakes and format them
-    for error_text, explanation in mistakes:
-        if error_text:
-            # Wrap the error text in a span with the appropriate class
-            class_name = "grammar-error" if mistakes_type == "grammar" else "style-error"
-            formatted_error = f'<span class="{class_name}">{error_text}</span>'
-            cursor.insertHtml(f"{formatted_error}: {explanation}<br>")
-    
-    return doc.toHtml()
 
 class LanguageTutorGUI(QMainWindow):
     """PyQt GUI for Language Tutor application."""
@@ -984,6 +493,8 @@ class LanguageTutorGUI(QMainWindow):
     async def _check_writing(self):
         """Check the user's writing."""
         self.writing_input = self.writing_input_area.toMarkdown()
+        # Store the HTML representation for interactive feedback recovery
+        self.state.writing_input_html = self.writing_input_area.toHtml()
 
         if not self.generated_exercise or not self.writing_input:
             QMessageBox.warning(
@@ -1021,6 +532,10 @@ class LanguageTutorGUI(QMainWindow):
                 definitions=self.exercise_definitions,
             )
             
+            # Store raw feedback for state restoration
+            self.state.grammar_errors_raw = mistakes
+            self.state.style_errors_raw = style_errors
+
             # Update stored values and displays with HTML formatted content
             self.writing_mistakes = format_mistakes_with_hover(mistakes, "grammar")
             self.style_errors = format_mistakes_with_hover(style_errors, "style")
@@ -1032,7 +547,11 @@ class LanguageTutorGUI(QMainWindow):
             self.recs_display.setMarkdown(self.recommendations)
             
             # Update the feedback handler with the errors
-            self.feedback_handler.update_errors(mistakes, style_errors, self.writing_input_area.toHtml())
+            self.feedback_handler.update_errors(
+                self.state.grammar_errors_raw,
+                self.state.style_errors_raw,
+                self.state.writing_input_html,
+            )
             
             self.statusBar().showMessage(f"Feedback provided! Cost: {cost:.4f} USD", 5000)
             
@@ -1099,6 +618,9 @@ class LanguageTutorGUI(QMainWindow):
             self.writing_mistakes = state.writing_mistakes
             self.style_errors = state.style_errors
             self.recommendations = state.recommendations
+            self.state.grammar_errors_raw = state.grammar_errors_raw
+            self.state.style_errors_raw = state.style_errors_raw
+            self.state.writing_input_html = state.writing_input_html
             
             # Update UI with Markdown
             self.exercise_display.setMarkdown(self.generated_exercise)
@@ -1107,6 +629,13 @@ class LanguageTutorGUI(QMainWindow):
             self.mistakes_display.setMarkdown(self.writing_mistakes)
             self.style_display.setMarkdown(self.style_errors)
             self.recs_display.setMarkdown(self.recommendations)
+
+            # Restore interactive feedback connections
+            self.feedback_handler.update_errors(
+                self.state.grammar_errors_raw,
+                self.state.style_errors_raw,
+                self.state.writing_input_html,
+            )
             
             self.statusBar().showMessage("State loaded successfully.", 3000)
         except Exception as e:
