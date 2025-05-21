@@ -2,7 +2,7 @@
 
 import json
 import os
-import litellm
+from language_tutor import llm
 
 from pathlib import Path
 import asyncio
@@ -82,7 +82,7 @@ class SettingsScreen(Screen):
                 f.write(f"OPENROUTER_API_KEY={api_key}\n")
 
             os.environ["OPENROUTER_API_KEY"] = api_key
-            litellm.api_key = api_key
+            llm.set_api_key(api_key)
 
             status.update("API key saved successfully!")
 

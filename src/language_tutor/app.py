@@ -6,7 +6,7 @@ import os
 import random
 import importlib.resources as resources
 from dotenv import load_dotenv
-import litellm
+from language_tutor import llm
 from textual.app import App, ComposeResult
 from textual.containers import Container, Horizontal, Vertical
 from textual.widgets import (
@@ -260,17 +260,15 @@ class LanguageTutorApp(App):
 
     def on_mount(self) -> None:
         """Called when the app is mounted."""
-        # Configure LiteLLM to use OpenRouter
-        litellm.api_key = os.getenv("OPENROUTER_API_KEY")
-        litellm.base_url = (
-            "https://openrouter.ai/api/v1"  # Or the specific OpenRouter endpoint
-        )
+        # Configure LLM
+        llm.set_api_key(os.getenv("OPENROUTER_API_KEY", ""))
+        llm.set_base_url("https://openrouter.ai/api/v1")
 
         self.load_config()  # Restore config on start
         api_key = os.getenv("OPENROUTER_API_KEY")
         if api_key:
-            litellm.api_key = api_key
-        if not litellm.api_key:
+            llm.set_api_key(api_key)
+        if not llm.is_configured():
             self.notify(
                 "Error: OPENROUTER_API_KEY not found in .env file. Please configure it in Settings (Ctrl+,).",
                 severity="error",
@@ -391,7 +389,7 @@ class LanguageTutorApp(App):
                 severity="warning",
             )
             return
-        if not litellm.api_key:
+        if not llm.is_configured():
             self.notify(
                 "API Key not configured. Please set your OpenRouter API key in Settings (Ctrl+,).",
                 severity="error",
@@ -446,7 +444,7 @@ class LanguageTutorApp(App):
                 severity="warning",
             )
             return
-        if not litellm.api_key:
+        if not llm.is_configured():
             self.notify(
                 "API Key not configured. Please set your OpenRouter API key in Settings (Ctrl+,).",
                 severity="error",

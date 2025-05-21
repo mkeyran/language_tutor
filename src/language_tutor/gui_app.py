@@ -4,7 +4,7 @@ import os
 import json
 import random
 import datetime
-import litellm
+from language_tutor import llm
 from dotenv import load_dotenv
 from PyQt5.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
@@ -50,15 +50,15 @@ class LanguageTutorGUI(QMainWindow):
         self._setup_menu()
         self._load_config()
         
-        # Configure LiteLLM
+        # Configure LLM
         env_path = os.path.join(get_config_dir(), ".env")
         if os.path.exists(env_path):
             load_dotenv(env_path)
-        litellm.api_key = os.getenv("OPENROUTER_API_KEY")
-        litellm.base_url = "https://openrouter.ai/api/v1"
+        llm.set_api_key(os.getenv("OPENROUTER_API_KEY", ""))
+        llm.set_base_url("https://openrouter.ai/api/v1")
         
         # Check for API key
-        if not litellm.api_key:
+        if not llm.is_configured():
             self.statusBar().showMessage(
                 "Error: API Key not configured. Please configure it in Settings.",
                 10000
@@ -418,7 +418,7 @@ class LanguageTutorGUI(QMainWindow):
             )
             return
             
-        if not litellm.api_key:
+        if not llm.is_configured():
             QMessageBox.critical(
                 self,
                 "API Key Required",
@@ -475,7 +475,7 @@ class LanguageTutorGUI(QMainWindow):
             )
             return
             
-        if not litellm.api_key:
+        if not llm.is_configured():
             QMessageBox.critical(
                 self,
                 "API Key Required",
@@ -642,5 +642,5 @@ class LanguageTutorGUI(QMainWindow):
         
         if result == SettingsDialog.Accepted:
             # Reload API key
-            litellm.api_key = os.getenv("OPENROUTER_API_KEY")
+            llm.set_api_key(os.getenv("OPENROUTER_API_KEY", ""))
             self.statusBar().showMessage("Settings updated successfully.", 3000)
