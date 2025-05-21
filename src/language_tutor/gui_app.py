@@ -469,6 +469,54 @@ class FeedbackHandler:
         self.current_highlighted_error = None
 
 
+def format_mistakes_with_hover(mistakes, mistakes_type):
+    """Format mistakes with hover functionality.
+    
+    Args:
+        mistakes (list): List of (error_text, explanation) tuples
+        mistakes_type (str): Type of mistakes ("grammar" or "style")
+        
+    Returns:
+        str: Formatted HTML string with hover functionality
+    """
+    if not mistakes:
+        return "No mistakes found."
+    
+    # Create a QTextDocument to format the text
+    doc = QTextDocument()
+    
+    # Create a QTextCursor to insert text
+    cursor = QTextCursor(doc)
+    
+    # Set the default font for the document
+    font = QFont("Arial", 12)
+    doc.setDefaultFont(font)
+    
+    # Add CSS for highlighting
+    css = """
+    <style>
+        .grammar-error {
+            background-color: rgba(255, 200, 200, 0.5); /* Light red */
+        }
+        .style-error {
+            background-color: rgba(200, 200, 255, 0.5); /* Light blue */
+        }
+    </style>
+    """
+    
+    # Insert CSS into the document
+    cursor.insertHtml(css)
+    
+    # Iterate through the mistakes and format them
+    for error_text, explanation in mistakes:
+        if error_text:
+            # Wrap the error text in a span with the appropriate class
+            class_name = "grammar-error" if mistakes_type == "grammar" else "style-error"
+            formatted_error = f'<span class="{class_name}">{error_text}</span>'
+            cursor.insertHtml(f"{formatted_error}: {explanation}<br>")
+    
+    return doc.toHtml()
+
 class LanguageTutorGUI(QMainWindow):
     """PyQt GUI for Language Tutor application."""
     
@@ -996,9 +1044,7 @@ class LanguageTutorGUI(QMainWindow):
             # Reset button state
             self.check_btn.setEnabled(True)
             self.check_btn.setText("Check Writing")
-    
-
-    
+        
     def _on_generate_clicked(self):
         """Handle generate button click."""
         run_async(self._generate_exercise())
