@@ -1,4 +1,4 @@
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, asdict, field
 import json
 import os
 from typing import Optional
@@ -19,6 +19,9 @@ class LanguageTutorState:
     style_errors: str = ""
     recommendations: str = ""
     writing_input: str = ""
+    grammar_errors_raw: list = field(default_factory=list)
+    style_errors_raw: list = field(default_factory=list)
+    writing_input_html: str = ""
 
     def to_dict(self) -> dict:
         return asdict(self)
