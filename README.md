@@ -4,7 +4,7 @@ A TUI (Text User Interface) application for practicing writing in foreign langua
 
 ## Features
 
-- Support for multiple languages (currently Polish and Portuguese)
+- Support for multiple languages (currently English, Polish, and Portuguese)
 - Interactive writing exercises with AI-generated prompts
 - AI-powered writing feedback and corrections
 - Export exercises and feedback to Markdown
