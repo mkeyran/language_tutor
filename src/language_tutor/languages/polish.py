@@ -1,7 +1,7 @@
 # Definitions for Polish Writing Exercises (B2 Level based on provided PDF)
 # Word counts adjusted based on examples +/- 10% tolerance mentioned in PDF
 
-EXCERCISE_DEFINITIONS = {
+EXERCISE_DEFINITIONS = {
     "życzenia (wishes)": {
         "expected_length": (
             27,
