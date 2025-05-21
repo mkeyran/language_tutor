@@ -4,15 +4,15 @@ import os
 from litellm.types.utils import CostPerToken
 
 # --- LiteLLM model names and prices ---
-OR_MODEL_NAME = "openrouter/google/gemini-2.5-flash-preview"
-OR_MODEL_NAME_CHECK = "openrouter/google/gemini-2.5-flash-preview:thinking"
+OR_MODEL_NAME = "openrouter/google/gemini-2.5-flash-preview-05-20"
+OR_MODEL_NAME_CHECK = "openrouter/google/gemini-2.5-flash-preview-05-20:thinking"
 # OR_MODEL_NAME_CHECK = "openrouter/openai/o3-mini"
 
 MODEL_PRICE_PER_TOKEN = {
-    "gemini-2.5-flash-preview": CostPerToken(
+    "gemini-2.5-flash-preview-05-20": CostPerToken(
         input_cost_per_token=0.15 / 1e6, output_cost_per_token=0.6 / 1e6
     ),
-    "gemini-2.5-flash-preview:thinking": CostPerToken(
+    "gemini-2.5-flash-preview-05-20:thinking": CostPerToken(
         input_cost_per_token=0.15 / 1e6, output_cost_per_token=0.6 / 1e6
     ),
     "o3-mini": CostPerToken(
@@ -22,9 +22,13 @@ MODEL_PRICE_PER_TOKEN = {
 
 # --- Available AI models for QA feature ---
 AI_MODELS = [
-    ("Gemini 2.5 Flash", "openrouter/google/gemini-2.5-flash-preview"),
+    ("Gemini 2.5 Flash", "openrouter/google/gemini-2.5-flash-preview-05-20"),
     ("Claude 3 Opus", "openrouter/anthropic/claude-3-opus"),
     ("GPT-4o", "openrouter/openai/gpt-4o"),
+    (
+        "Gemini 2.5 Flash: Thinking",
+        "openrouter/google/gemini-2.5-flash-preview-05-20:thinking",
+    ),
 ]
 
 # --- Supported languages and proficiency levels ---
