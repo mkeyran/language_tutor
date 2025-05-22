@@ -24,4 +24,6 @@ exercise_types = {
 }
 
 for type in exercise_types.keys():
-    exercise_types[type] = [("Random", "Random")] + exercise_types[type]
+    exercise_types[type] = (
+        [("Random", "Random")] + exercise_types[type] + [("Custom", "Custom")]
+    )

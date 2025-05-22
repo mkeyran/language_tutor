@@ -206,6 +206,7 @@ class LanguageTutorGUI(QMainWindow):
         display_layout.addWidget(QLabel("Exercise:"))
         self.exercise_display = QTextEdit()
         self.exercise_display.setReadOnly(True)
+        self.exercise_display.setPlaceholderText("Exercise will appear here...")
         display_layout.addWidget(self.exercise_display)
         
         # Hints display
@@ -388,16 +389,29 @@ class LanguageTutorGUI(QMainWindow):
         if index >= 0:
             exercise_text = self.exercise_select.itemText(index)
             if exercise_text == "Random":
-                # Select a random exercise type (skip the first "Random" option)
-                if self.exercise_select.count() <= 1:
+                # Select a random exercise type (skip Random and Custom options)
+                valid_indices = [
+                    i
+                    for i in range(1, self.exercise_select.count())
+                    if self.exercise_select.itemText(i) != "Custom"
+                ]
+                if not valid_indices:
                     self.statusBar().showMessage("No other exercise types available.", 3000)
                     return
-                random_index = random.randint(1, self.exercise_select.count() - 1)
+                random_index = random.choice(valid_indices)
                 self.exercise_select.setCurrentIndex(random_index)
                 return
-            
+
             self.selected_exercise = exercise_text
-            self.statusBar().showMessage(f"Exercise type set to: {exercise_text}", 3000)
+            if exercise_text == "Custom":
+                self.generate_btn.setEnabled(False)
+                self.exercise_display.setReadOnly(False)
+                self.statusBar().showMessage("Custom exercise selected. Edit the task above.", 3000)
+            else:
+                self.generate_btn.setEnabled(True)
+                self.exercise_display.setReadOnly(True)
+                self.statusBar().showMessage(f"Exercise type set to: {exercise_text}", 3000)
+
             self._update_word_count()
     
     def _reload_definitions(self):
@@ -442,15 +456,28 @@ class LanguageTutorGUI(QMainWindow):
             self.exercise_select.currentIndex() >= 0
             and self.exercise_select.currentText() == "Random"
         ):
-            if self.exercise_select.count() <= 1:
+            valid_indices = [
+                i
+                for i in range(1, self.exercise_select.count())
+                if self.exercise_select.itemText(i) != "Custom"
+            ]
+            if not valid_indices:
                 QMessageBox.warning(
                     self,
                     "Missing Selection",
                     "No other exercise types available.",
                 )
                 return
-            random_index = random.randint(1, self.exercise_select.count() - 1)
+            random_index = random.choice(valid_indices)
             self.exercise_select.setCurrentIndex(random_index)
+
+        if self.selected_exercise == "Custom":
+            QMessageBox.information(
+                self,
+                "Custom Exercise",
+                "Enter your custom exercise in the text box above.",
+            )
+            return
 
         if not self.selected_language or not self.selected_exercise:
             QMessageBox.warning(
@@ -625,6 +652,12 @@ class LanguageTutorGUI(QMainWindow):
                 index = self.exercise_select.findText(exercise)
                 if index >= 0:
                     self.exercise_select.setCurrentIndex(index)
+                if exercise == "Custom":
+                    self.generate_btn.setEnabled(False)
+                    self.exercise_display.setReadOnly(False)
+                else:
+                    self.generate_btn.setEnabled(True)
+                    self.exercise_display.setReadOnly(True)
 
             # Restore content
             self.generated_exercise = state.generated_exercise
