@@ -3,6 +3,9 @@
 import os
 from litellm.types.utils import CostPerToken
 
+# Default UI settings
+DEFAULT_TEXT_FONT_SIZE = 14
+
 # --- LiteLLM model names and prices ---
 OR_MODEL_NAME = "openrouter/google/gemini-2.5-flash-preview-05-20"
 OR_MODEL_NAME_CHECK = "openrouter/google/gemini-2.5-flash-preview-05-20:thinking"

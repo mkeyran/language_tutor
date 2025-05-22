@@ -37,6 +37,7 @@ from language_tutor.config import (
     get_state_path,
     get_export_path,
     get_config_dir,
+    DEFAULT_TEXT_FONT_SIZE,
 )
 from language_tutor.exercise import (
     generate_exercise,
@@ -61,6 +62,8 @@ class LanguageTutorGUI(QMainWindow):
         self.exercise_definitions = {}
         self.exercise_types = []
 
+        self.text_font_size = DEFAULT_TEXT_FONT_SIZE
+
         # Centralize application state
         self.state = LanguageTutorState()
 
@@ -74,6 +77,7 @@ class LanguageTutorGUI(QMainWindow):
         self._setup_ui()
         self._setup_menu()
         self._load_config()
+        self._apply_font_size()
 
         # Restore previous session if available
         self.load_state(auto=True)
@@ -373,6 +377,9 @@ class LanguageTutorGUI(QMainWindow):
                 # Set language and level from config
                 lang = config.get("selected_language", "")
                 level = config.get("selected_level", "")
+                self.text_font_size = config.get(
+                    "text_font_size", DEFAULT_TEXT_FONT_SIZE
+                )
 
                 if lang:
                     index = next(
@@ -389,15 +396,27 @@ class LanguageTutorGUI(QMainWindow):
                 self.statusBar().showMessage(
                     f"Loaded config: Language={lang}, Level={level}", 3000
                 )
+                self._apply_font_size()
             except Exception as e:
                 self.statusBar().showMessage(f"Error loading config: {str(e)}", 5000)
 
     def _save_config(self):
         """Save configuration to config file."""
-        config = {
-            "selected_language": self.selected_language,
-            "selected_level": self.selected_level,
-        }
+        if os.path.exists(get_config_path()):
+            try:
+                with open(get_config_path(), "r") as f:
+                    config = json.load(f)
+            except Exception:
+                config = {}
+        else:
+            config = {}
+        config.update(
+            {
+                "selected_language": self.selected_language,
+                "selected_level": self.selected_level,
+                "text_font_size": self.text_font_size,
+            }
+        )
         try:
             with open(get_config_path(), "w") as f:
                 json.dump(config, f)
@@ -472,6 +491,19 @@ class LanguageTutorGUI(QMainWindow):
         self.exercise_select.clear()
         for exercise_type in self.exercise_types:
             self.exercise_select.addItem(exercise_type[0], exercise_type[1])
+
+    def _apply_font_size(self):
+        """Apply the configured font size to all text edits."""
+        style = f"font-size: {self.text_font_size}px;"
+        for te in [
+            self.exercise_display,
+            self.hints_display,
+            self.writing_input_area,
+            self.mistakes_display,
+            self.style_display,
+            self.recs_display,
+        ]:
+            te.setStyleSheet(style)
 
     def _on_writing_changed(self):
         """Handle changes in the writing input."""
@@ -875,6 +907,8 @@ class LanguageTutorGUI(QMainWindow):
         if result == SettingsDialog.Accepted:
             # Reload API key
             llm.set_api_key(os.getenv("OPENROUTER_API_KEY", ""))
+            self._load_config()
+            self._apply_font_size()
             self.statusBar().showMessage("Settings updated successfully.", 3000)
 
     def closeEvent(self, event):

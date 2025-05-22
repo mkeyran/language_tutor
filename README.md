@@ -9,6 +9,7 @@ A TUI (Text User Interface) application for practicing writing in foreign langua
 - AI-powered writing feedback and corrections
 - Export exercises and feedback to Markdown
 - Save and load your work sessions
+- Configurable font size for text edits
 
 ## Installation
 
@@ -51,6 +52,7 @@ OPENROUTER_API_KEY=your_api_key_here
 4. Click "Generate Exercise" 
 5. Write your response in the input area
 6. Click "Check Writing" for AI-powered feedback
+7. Adjust the text font size in **Settings** if desired
 
 ## Commands
 
