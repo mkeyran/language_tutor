@@ -188,7 +188,7 @@ class LanguageTutorApp(App):
             self.query_one("#level-select", Select).value = self.selected_level
 
             # Restore TextAreas and Markdown components
-            self.query_one("#exercise-display", Markdown).update(
+            self.query_one("#exercise-display", TextArea).load_text(
                 self.generated_exercise
             )
             self.query_one("#hints-display", Markdown).update(self.generated_hints)
@@ -273,7 +273,7 @@ class LanguageTutorApp(App):
                 )
                 yield Button("Generate Exercise", id="generate-btn", variant="primary")
                 yield Static("Exercise:", classes="label", id="exercise-label")
-                yield Markdown(
+                yield TextArea(
                     self.generated_exercise,
                     id="exercise-display",
                     classes="display-area",
@@ -302,6 +302,9 @@ class LanguageTutorApp(App):
         # Configure LLM
         llm.set_api_key(os.getenv("OPENROUTER_API_KEY", ""))
         llm.set_base_url("https://openrouter.ai/api/v1")
+
+        # Exercise area is read-only by default
+        self.query_one("#exercise-display", TextArea).read_only = True
 
         self.load_config()  # Restore config on start
         self.load_state(auto=True)
@@ -372,15 +375,31 @@ class LanguageTutorApp(App):
             self.notify(f"Language set to: {event.value}")
         elif event.select.id == "exercise-select":
             if event.value == "Random":
-                self.selected_exercise = self.excercise_types[
-                    random.randint(1, len(self.excercise_types) - 1)
-                ][0]
+                choices = [
+                    et[0]
+                    for et in self.excercise_types[1:]
+                    if et[0] != "Custom"
+                ]
+                if not choices:
+                    self.notify("No other exercise types available.", severity="warning")
+                    return
+                self.selected_exercise = random.choice(choices)
                 excercise_select = self.query_one("#exercise-select", Select)
                 excercise_select.value = self.selected_exercise
                 excercise_select.refresh()
             else:
                 self.selected_exercise = event.value
                 self.notify(f"Exercise type set to: {self.selected_exercise}")
+
+            generate_btn = self.query_one("#generate-btn", Button)
+            exercise_area = self.query_one("#exercise-display", TextArea)
+            if self.selected_exercise == "Custom":
+                generate_btn.disabled = True
+                exercise_area.read_only = False
+                self.notify("Custom exercise selected. Edit the task above.")
+            else:
+                generate_btn.disabled = False
+                exercise_area.read_only = True
             # Update the expected length in the word count label
             self._update_word_count()
         elif event.select.id == "level-select":
@@ -429,6 +448,12 @@ class LanguageTutorApp(App):
                 severity="warning",
             )
             return
+        if self.selected_exercise == "Custom":
+            self.notify(
+                "Custom exercise selected. Enter your own task in the text box.",
+                severity="info",
+            )
+            return
         if not llm.is_configured():
             self.notify(
                 "API Key not configured. Please set your OpenRouter API key in Settings (Ctrl+,).",
@@ -440,7 +465,7 @@ class LanguageTutorApp(App):
         generate_btn = self.query_one("#generate-btn", Button)
         generate_btn.loading = True
         generate_btn.disabled = True
-        self.query_one("#exercise-display", Markdown).update("Generating...")
+        self.query_one("#exercise-display", TextArea).load_text("Generating...")
         self.query_one("#hints-display", Markdown).update("")  # Clear previous hints
 
         self.notify(
@@ -461,7 +486,7 @@ class LanguageTutorApp(App):
             self.generated_hints = hints
 
             # Update TextAreas
-            self.query_one("#exercise-display", Markdown).update(
+            self.query_one("#exercise-display", TextArea).load_text(
                 self.generated_exercise
             )
             self.query_one("#hints-display", Markdown).update(self.generated_hints)
@@ -469,7 +494,7 @@ class LanguageTutorApp(App):
 
         except Exception as e:
             self.notify(f"Error generating exercise: {e}", severity="error", timeout=10)
-            self.query_one("#exercise-display", Markdown).update(f"Error: {e}")
+            self.query_one("#exercise-display", TextArea).load_text(f"Error: {e}")
         finally:
             # Reset button state
             generate_btn.loading = False
@@ -478,6 +503,9 @@ class LanguageTutorApp(App):
     async def action_check_writing(self) -> None:
         """Check the user's writing using LiteLLM."""
         self.writing_input = self.query_one("#writing-input", TextArea).text
+        if self.selected_exercise == "Custom":
+            self.generated_exercise = self.query_one("#exercise-display", TextArea).text
+
         if not self.generated_exercise or not self.writing_input:
             self.notify(
                 "Please generate an exercise and write something first.",
