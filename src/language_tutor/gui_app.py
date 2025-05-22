@@ -44,7 +44,7 @@ from language_tutor.exercise import (
     check_writing,
 )
 from language_tutor.async_runner import run_async
-from language_tutor.gui_screens import QADialog, SettingsDialog
+from language_tutor.gui_screens import QADialog, SettingsDialog, WiktionaryDialog
 from language_tutor.state import LanguageTutorState
 from language_tutor.feedback_handler import FeedbackHandler, format_mistakes_with_hover
 
@@ -348,6 +348,11 @@ class LanguageTutorGUI(QMainWindow):
         qa_action.setShortcut("Ctrl+G")
         qa_action.triggered.connect(self.open_qa_dialog)
         tools_menu.addAction(qa_action)
+
+        dict_action = QAction("&Lookup Word", self)
+        dict_action.setShortcut("Ctrl+D")
+        dict_action.triggered.connect(self.open_wiktionary_dialog)
+        tools_menu.addAction(dict_action)
 
         settings_action = QAction("&Settings", self)
         settings_action.setShortcut("Ctrl+,")
@@ -855,6 +860,11 @@ class LanguageTutorGUI(QMainWindow):
                 "exercise": self.generated_exercise,
             }
         )
+        dialog.exec_()
+
+    def open_wiktionary_dialog(self):
+        """Open the Wiktionary lookup dialog."""
+        dialog = WiktionaryDialog(self)
         dialog.exec_()
 
     def open_settings_dialog(self):
