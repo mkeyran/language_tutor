@@ -38,7 +38,11 @@ from language_tutor.config import (
     get_export_path,
     get_config_dir,
 )
-from language_tutor.exercise import generate_exercise, check_writing
+from language_tutor.exercise import (
+    generate_exercise,
+    generate_custom_hints,
+    check_writing,
+)
 from language_tutor.async_runner import run_async
 from language_tutor.gui_screens import QADialog, SettingsDialog
 from language_tutor.state import LanguageTutorState
@@ -436,13 +440,15 @@ class LanguageTutorGUI(QMainWindow):
 
             self.selected_exercise = exercise_text
             if exercise_text == "Custom":
-                self.generate_btn.setEnabled(False)
+                self.generate_btn.setEnabled(True)
+                self.generate_btn.setText("Generate Hints")
                 self.exercise_display.setReadOnly(False)
                 self.statusBar().showMessage(
                     "Custom exercise selected. Edit the task above.", 3000
                 )
             else:
                 self.generate_btn.setEnabled(True)
+                self.generate_btn.setText("Generate Exercise")
                 self.exercise_display.setReadOnly(True)
                 self.statusBar().showMessage(
                     f"Exercise type set to: {exercise_text}", 3000
@@ -516,11 +522,51 @@ class LanguageTutorGUI(QMainWindow):
             self.exercise_select.setCurrentIndex(random_index)
 
         if self.selected_exercise == "Custom":
-            QMessageBox.information(
-                self,
-                "Custom Exercise",
-                "Enter your custom exercise in the text box above.",
+            custom_text = self.exercise_display.toMarkdown().strip()
+            if not custom_text:
+                QMessageBox.information(
+                    self,
+                    "Custom Exercise",
+                    "Enter your custom exercise in the text box above.",
+                )
+                return
+
+            if not llm.is_configured():
+                QMessageBox.critical(
+                    self,
+                    "API Key Required",
+                    "API Key not configured. Please set your OpenRouter API key in Settings.",
+                )
+                return
+
+            self.generate_btn.setEnabled(False)
+            self.generate_btn.setText("Generating...")
+            self.hints_display.setText("")
+            self.statusBar().showMessage(
+                "Generating hints for custom exercise...",
+                5000,
             )
+
+            try:
+                hints, cost = await generate_custom_hints(
+                    language=self.selected_language,
+                    level=self.selected_level,
+                    exercise_text=custom_text,
+                )
+
+                self.generated_exercise = custom_text
+                self.generated_hints = hints
+                self.hints_display.setMarkdown(self.generated_hints)
+                self.statusBar().showMessage(
+                    f"Hints generated! Cost: {cost:.4f} USD",
+                    5000,
+                )
+            except Exception as e:
+                QMessageBox.critical(self, "Error Generating Hints", str(e))
+                self.hints_display.setMarkdown(f"Error: {str(e)}")
+            finally:
+                self.generate_btn.setEnabled(True)
+                self.generate_btn.setText("Generate Hints")
             return
 
         if not self.selected_language or not self.selected_exercise:
@@ -727,10 +773,12 @@ class LanguageTutorGUI(QMainWindow):
                 if index >= 0:
                     self.exercise_select.setCurrentIndex(index)
                 if exercise == "Custom":
-                    self.generate_btn.setEnabled(False)
+                    self.generate_btn.setEnabled(True)
+                    self.generate_btn.setText("Generate Hints")
                     self.exercise_display.setReadOnly(False)
                 else:
                     self.generate_btn.setEnabled(True)
+                    self.generate_btn.setText("Generate Exercise")
                     self.exercise_display.setReadOnly(True)
 
             # Restore content
