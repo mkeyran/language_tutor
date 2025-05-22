@@ -65,6 +65,8 @@ The exercise text goes here
 <hints>
 Optional hints go here. You can add useful phrases in addition to the hints. If no hints, write "None."
 </hints>
+Please use markdown for hints formatting.
+
 """
     messages = [{"role": "user", "content": prompt}]
 
@@ -102,6 +104,8 @@ Format the output EXACTLY like this using XML tags:
 <hints>
 Your hints here or \"None.\"
 </hints>
+
+Please use markdown for hints formatting.
 """
 
     messages = [{"role": "user", "content": prompt}]
