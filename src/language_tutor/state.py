@@ -2,6 +2,7 @@ from dataclasses import dataclass, asdict, field
 import json
 import os
 from typing import Optional
+import toml
 
 from .config import get_state_path
 
@@ -27,21 +28,39 @@ class LanguageTutorState:
         return asdict(self)
 
     def save(self, path: Optional[str] = None) -> None:
-        """Serialize the state to JSON."""
+        """Serialize the state to file.
+
+        If the file extension is ``.json`` the state is stored as JSON,
+        otherwise it is stored in ``toml`` format.  When ``path`` is
+        omitted the default location returned by :func:`get_state_path`
+        is used.
+        """
         if path is None:
             path = get_state_path()
+        ext = os.path.splitext(path)[1].lower()
         with open(path, "w") as f:
-            json.dump(self.to_dict(), f)
+            if ext == ".json":
+                json.dump(self.to_dict(), f)
+            else:
+                toml.dump(self.to_dict(), f)
 
     @classmethod
     def load(cls, path: Optional[str] = None) -> "LanguageTutorState":
-        """Load state from JSON file."""
+        """Load state from file.
+
+        If the file extension is ``.json`` the state is interpreted as
+        JSON, otherwise it is treated as ``toml``.
+        """
         if path is None:
             path = get_state_path()
         if not os.path.exists(path):
             return cls()
+        ext = os.path.splitext(path)[1].lower()
         with open(path, "r") as f:
-            data = json.load(f)
+            if ext == ".json":
+                data = json.load(f)
+            else:
+                data = toml.load(f)
         return cls(**data)
 
 
