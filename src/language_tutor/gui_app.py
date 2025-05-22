@@ -437,10 +437,25 @@ class LanguageTutorGUI(QMainWindow):
     
     async def _generate_exercise(self):
         """Generate a new exercise."""
+        # If the exercise type is set to "Random", pick a concrete one
+        if (
+            self.exercise_select.currentIndex() >= 0
+            and self.exercise_select.currentText() == "Random"
+        ):
+            if self.exercise_select.count() <= 1:
+                QMessageBox.warning(
+                    self,
+                    "Missing Selection",
+                    "No other exercise types available.",
+                )
+                return
+            random_index = random.randint(1, self.exercise_select.count() - 1)
+            self.exercise_select.setCurrentIndex(random_index)
+
         if not self.selected_language or not self.selected_exercise:
             QMessageBox.warning(
-                self, 
-                "Missing Selection", 
+                self,
+                "Missing Selection",
                 "Please select both a language and an exercise type."
             )
             return
