@@ -181,12 +181,6 @@ class LanguageTutorGUI(QMainWindow):
         else:
             # Fallback to a default stylesheet if the file doesn't exist
             self.text_area_default_stylesheet = """
-            QTextEdit {
-                background-color: #f0f0f0;
-                border: 1px solid #ccc;
-                font-size: 14px;
-                padding: 5px;
-            }
             """
 
         # Left pane - Exercise generation
@@ -280,24 +274,24 @@ class LanguageTutorGUI(QMainWindow):
         self.mistakes_display = QTextEdit()
         self.mistakes_display.setReadOnly(True)
         self.feedback_tabs.addTab(self.mistakes_display, "Mistakes")
-        self.mistakes_display.document().setDefaultStyleSheet(
-            self.text_area_default_stylesheet
-        )
+        # self.mistakes_display.document().setDefaultStyleSheet(
+        #     self.text_area_default_stylesheet
+        # )
 
         # Stylistic Errors tab
         self.style_display = QTextEdit()
         self.style_display.setReadOnly(True)
         self.feedback_tabs.addTab(self.style_display, "Stylistic Errors")
-        self.style_display.document().setDefaultStyleSheet(
-            self.text_area_default_stylesheet
-        )
+        # self.style_display.document().setDefaultStyleSheet(
+        #     self.text_area_default_stylesheet
+        # )
         # Recommendations tab
         self.recs_display = QTextEdit()
         self.recs_display.setReadOnly(True)
         self.feedback_tabs.addTab(self.recs_display, "Recommendations")
-        self.recs_display.document().setDefaultStyleSheet(
-            self.text_area_default_stylesheet
-        )
+        # self.recs_display.document().setDefaultStyleSheet(
+        #     self.text_area_default_stylesheet
+        # )
 
         feedback_layout.addWidget(self.feedback_tabs)
 
@@ -716,8 +710,8 @@ class LanguageTutorGUI(QMainWindow):
             self.recommendations = recommendations
 
             # Use setHtml instead of setMarkdown to support our custom HTML
-            self.mistakes_display.setHtml(self.writing_mistakes)
-            self.style_display.setHtml(self.style_errors)
+            self.mistakes_display.setMarkdown(self.writing_mistakes)
+            self.style_display.setMarkdown(self.style_errors)
             self.recs_display.setMarkdown(self.recommendations)
 
             # Update the feedback handler with the errors
@@ -747,6 +741,7 @@ class LanguageTutorGUI(QMainWindow):
     def _on_check_clicked(self):
         """Handle check button click."""
         run_async(self._check_writing())
+
     def save_state(self, *_, path: str | None = None, auto: bool = False):
         """Save the current application state."""
         if path is None and not auto:
@@ -754,7 +749,7 @@ class LanguageTutorGUI(QMainWindow):
                 self,
                 "Save State",
                 get_state_path().replace(".json", ".lts"),
-                "Language Tutor State (*.lts);;JSON (*.json)"
+                "Language Tutor State (*.lts);;JSON (*.json)",
             )
         if path is None or path == "":
             path = get_state_path()
@@ -764,7 +759,7 @@ class LanguageTutorGUI(QMainWindow):
                 self.statusBar().showMessage("State saved successfully.", 3000)
         except Exception as e:
             QMessageBox.critical(self, "Error Saving State", str(e))
-    
+
     def load_state(self, *_, path: str | None = None, auto: bool = False):
         """Load the application state."""
         if path is None and not auto:
@@ -772,7 +767,7 @@ class LanguageTutorGUI(QMainWindow):
                 self,
                 "Load State",
                 get_state_path().replace(".json", ".lts"),
-                "Language Tutor State (*.lts *.json)"
+                "Language Tutor State (*.lts *.json)",
             )
         if path is None or path == "":
             path = get_state_path()

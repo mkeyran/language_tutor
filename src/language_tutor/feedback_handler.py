@@ -103,7 +103,9 @@ class FeedbackHandler:
 
         self.writing_input.setHtml(processed_text)
         cursor = self.writing_input.textCursor()
-        cursor.setPosition(min(self._pre_highlight_cursor, len(self.writing_input.toPlainText())))
+        cursor.setPosition(
+            min(self._pre_highlight_cursor, len(self.writing_input.toPlainText()))
+        )
         self.writing_input.setTextCursor(cursor)
         self.writing_input.verticalScrollBar().setValue(self._pre_highlight_scroll)
 
@@ -139,7 +141,9 @@ class FeedbackHandler:
 
         self.writing_input.setHtml(self._pre_highlight_html)
         cursor = self.writing_input.textCursor()
-        cursor.setPosition(min(self._pre_highlight_cursor, len(self.writing_input.toPlainText())))
+        cursor.setPosition(
+            min(self._pre_highlight_cursor, len(self.writing_input.toPlainText()))
+        )
         self.writing_input.setTextCursor(cursor)
         self.writing_input.verticalScrollBar().setValue(self._pre_highlight_scroll)
 
@@ -149,29 +153,14 @@ class FeedbackHandler:
 
 def format_mistakes_with_hover(mistakes, mistakes_type):
     """Format mistakes with hover functionality."""
-    if not mistakes:
-        return "No mistakes found."
-    doc = QTextDocument()
-    cursor = QTextCursor(doc)
-    font = QFont("Arial", 12)
-    doc.setDefaultFont(font)
-    css = """
-    <style>
-        .grammar-error {
-            background-color: rgba(255, 200, 200, 0.5);
-        }
-        .style-error {
-            background-color: rgba(200, 200, 255, 0.5);
-        }
-    </style>
-    """
-    cursor.insertHtml(css)
-
+    return_text = ""
     for error_text, explanation in mistakes:
         if error_text:
             class_name = (
                 "grammar-error" if mistakes_type == "grammar" else "style-error"
             )
-            formatted_error = f'<span class="{class_name}">{error_text}</span>'
-            cursor.insertHtml(f"<div> - {formatted_error}: {explanation}</div><br>")
-    return doc.toHtml()
+            return_text += f"* **{error_text}**: {explanation}\n"
+        else:
+            return_text += f"* {explanation}\n"
+    print(return_text)
+    return return_text
