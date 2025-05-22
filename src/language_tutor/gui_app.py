@@ -864,7 +864,7 @@ class LanguageTutorGUI(QMainWindow):
 
     def open_wiktionary_dialog(self):
         """Open the Wiktionary lookup dialog."""
-        dialog = WiktionaryDialog(self)
+        dialog = WiktionaryDialog(self, language=self.selected_language or "en")
         dialog.exec_()
 
     def open_settings_dialog(self):

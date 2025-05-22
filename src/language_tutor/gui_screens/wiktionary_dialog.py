@@ -1,6 +1,8 @@
 """Wiktionary lookup dialog."""
 
 import urllib.parse
+
+from language_tutor.utils import build_wiktionary_url
 from PyQt5.QtWidgets import (
     QDialog,
     QGridLayout,
@@ -19,8 +21,9 @@ from PyQt5.QtWebEngineWidgets import QWebEngineView
 class WiktionaryDialog(QDialog):
     """Dialog for searching words on Wiktionary."""
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, language: str = "en"):
         super().__init__(parent)
+        self.language = language
         self.setWindowTitle("Wiktionary Lookup")
         self.resize(1200, 900)
 
@@ -69,5 +72,5 @@ class WiktionaryDialog(QDialog):
         word = self.word_input.text().strip()
         if not word:
             return
-        url = "https://en.m.wiktionary.org/wiki/" + urllib.parse.quote(word)
+        url = build_wiktionary_url(word, self.language)
         self.web_view.load(QUrl(url))
