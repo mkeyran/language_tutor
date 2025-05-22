@@ -14,6 +14,9 @@ class FeedbackHandler:
         self.style_errors = []
         self.original_text = ""
         self.current_highlighted_error = None
+        self._pre_highlight_html = None
+        self._pre_highlight_cursor = 0
+        self._pre_highlight_scroll = 0
 
         self.original_stylesheet = self.writing_input.styleSheet()
 
@@ -39,7 +42,7 @@ class FeedbackHandler:
         self.style_display.leaveEvent = self._create_leave_handler()
 
     def update_errors(self, grammar_errors, style_errors, text):
-        """Update stored errors and original text."""
+        """Update stored errors and text from the last check."""
         self.grammar_errors = grammar_errors
         self.style_errors = style_errors
         self.original_text = text
@@ -79,20 +82,30 @@ class FeedbackHandler:
         if not error_text:
             return
 
+        if self.current_highlighted_error:
+            self.restore_original_text()
+
         self.current_highlighted_error = (error_text, error_type)
-        scrollbar_pos = self.writing_input.verticalScrollBar().value()
-        cursor_pos = self.writing_input.textCursor().position()
+        self._pre_highlight_scroll = self.writing_input.verticalScrollBar().value()
+        self._pre_highlight_cursor = self.writing_input.textCursor().position()
+        self._pre_highlight_html = self.writing_input.toHtml()
+
         bg_color = "#ffcccc" if error_type == "grammar" else "#ccccff"
         processed_text = self._find_and_highlight_error(
-            original_text=self.original_text,
+            original_text=self._pre_highlight_html,
             error_text=error_text,
             bg_color=bg_color,
         )
+
+        if processed_text == self._pre_highlight_html:
+            self.current_highlighted_error = None
+            return
+
         self.writing_input.setHtml(processed_text)
         cursor = self.writing_input.textCursor()
-        cursor.setPosition(min(cursor_pos, len(self.original_text)))
+        cursor.setPosition(min(self._pre_highlight_cursor, len(self.writing_input.toPlainText())))
         self.writing_input.setTextCursor(cursor)
-        self.writing_input.verticalScrollBar().setValue(scrollbar_pos)
+        self.writing_input.verticalScrollBar().setValue(self._pre_highlight_scroll)
 
     def _find_and_highlight_error(self, original_text, error_text, bg_color):
         doc = QTextDocument()
@@ -121,16 +134,17 @@ class FeedbackHandler:
         return original_text
 
     def restore_original_text(self):
-        if not self.original_text or not self.current_highlighted_error:
+        if not self.current_highlighted_error or self._pre_highlight_html is None:
             return
-        scrollbar_pos = self.writing_input.verticalScrollBar().value()
-        cursor_pos = self.writing_input.textCursor().position()
-        self.writing_input.setHtml(self.original_text)
+
+        self.writing_input.setHtml(self._pre_highlight_html)
         cursor = self.writing_input.textCursor()
-        cursor.setPosition(min(cursor_pos, len(self.original_text)))
+        cursor.setPosition(min(self._pre_highlight_cursor, len(self.writing_input.toPlainText())))
         self.writing_input.setTextCursor(cursor)
-        self.writing_input.verticalScrollBar().setValue(scrollbar_pos)
+        self.writing_input.verticalScrollBar().setValue(self._pre_highlight_scroll)
+
         self.current_highlighted_error = None
+        self._pre_highlight_html = None
 
 
 def format_mistakes_with_hover(mistakes, mistakes_type):
