@@ -16,6 +16,7 @@ dependencies = [
     "litellm>=1.67.2",
     "nest-asyncio>=1.6.0",
     "pyqt5>=5.15.11",
+    "pyqtwebengine>=5.15.7",
     "python-dotenv>=1.1.0",
     "toml>=0.10.2",
 ]
