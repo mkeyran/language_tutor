@@ -29,6 +29,8 @@ from language_tutor.config import (
     get_export_path,
     get_config_dir,
 )
+from language_tutor.state import LanguageTutorState
+from tkinter import Tk, filedialog
 from language_tutor.exercise import generate_exercise, check_writing
 from language_tutor.screens import QAScreen, SettingsScreen
 
@@ -103,46 +105,82 @@ class LanguageTutorApp(App):
             except Exception as e:
                 self.notify(f"Error loading config: {e}", severity="error")
 
-    def save_state(self):
-        """Save the current application state to state.json."""
+    def _ask_save_path(self) -> str | None:
+        """Open a save file dialog and return the selected path."""
+        root = Tk()
+        root.withdraw()
+        path = filedialog.asksaveasfilename(
+            defaultextension=".lts",
+            filetypes=[
+                ("Language Tutor State", "*.lts"),
+                ("JSON", "*.json"),
+                ("All files", "*.*"),
+            ],
+        )
+        root.destroy()
+        return path or None
+
+    def _ask_open_path(self) -> str | None:
+        """Open a load file dialog and return the selected path."""
+        root = Tk()
+        root.withdraw()
+        path = filedialog.askopenfilename(
+            filetypes=[
+                ("Language Tutor State", "*.lts *.json"),
+                ("All files", "*.*"),
+            ]
+        )
+        root.destroy()
+        return path or None
+
+    def save_state(self, path: str | None = None, auto: bool = False) -> None:
+        """Save the current application state."""
+        if path is None and not auto:
+            path = self._ask_save_path()
+        if path is None:
+            path = get_state_path()
         try:
-            state = {
-                "selected_language": self.selected_language,
-                "selected_exercise": self.selected_exercise,
-                "selected_level": self.selected_level,
-                "generated_exercise": self.generated_exercise,
-                "generated_hints": self.generated_hints,
-                "writing_input": self.writing_input,
-                "mistakes": self.writing_mistakes,
-                "style": self.style_errors,
-                "recs": self.recommendations,
-            }
-            with open(get_state_path(), "w") as f:
-                json.dump(state, f)
-            self.notify("State saved successfully.")
+            state = LanguageTutorState(
+                selected_language=self.selected_language,
+                selected_exercise=self.selected_exercise,
+                selected_level=self.selected_level,
+                generated_exercise=self.generated_exercise,
+                generated_hints=self.generated_hints,
+                writing_input=self.writing_input,
+                writing_mistakes=self.writing_mistakes,
+                style_errors=self.style_errors,
+                recommendations=self.recommendations,
+            )
+            state.save(path)
+            if not auto:
+                self.notify("State saved successfully.")
         except Exception as e:
             self.notify(f"Error saving state: {e}", severity="error")
 
-    def load_state(self):
-        """Load the application state from state.json."""
-        if not os.path.exists(get_state_path()):
-            self.notify("No saved state found.", severity="warning")
+    def load_state(self, path: str | None = None, auto: bool = False) -> None:
+        """Load the application state."""
+        if path is None and not auto:
+            path = self._ask_open_path()
+        if path is None:
+            path = get_state_path()
+        if not os.path.exists(path):
+            if not auto:
+                self.notify("No saved state found.", severity="warning")
             return
         try:
-            with open(get_state_path(), "r") as f:
-                state = json.load(f)
+            state = LanguageTutorState.load(path)
             # Restore selections
-            self.selected_language = state.get("selected_language", "")
+            self.selected_language = state.selected_language
             self._reload_definitions()
 
-            self.selected_exercise = state.get("selected_exercise", "")
-            self.selected_level = state.get("selected_level", "")
-            self.generated_exercise = state.get("generated_exercise", "")
-            self.generated_hints = state.get("generated_hints", "")
-            self.writing_input = state.get("writing_input", "")
-            self.writing_mistakes = state.get("mistakes", "")
-            self.style_errors = state.get("style", "")
-            self.recommendations = state.get("recs", "")
+            self.selected_exercise = state.selected_exercise
+            self.selected_level = state.selected_level
+            self.generated_exercise = state.generated_exercise
+            self.generated_hints = state.generated_hints
+            self.writing_input = state.writing_input
+            self.writing_mistakes = state.writing_mistakes
+            self.style_errors = state.style_errors
+            self.recommendations = state.recommendations
 
             # Restore Select widgets
             self.query_one("#language-select", Select).value = self.selected_language
@@ -159,7 +197,8 @@ class LanguageTutorApp(App):
             self.query_one("#style-display", Markdown).update(self.style_errors)
             self.query_one("#recs-display", Markdown).update(self.recommendations)
 
-            self.notify("State loaded successfully.")
+            if not auto:
+                self.notify("State loaded successfully.")
         except Exception as e:
             self.notify(f"Error loading state: {e}", severity="error")
 
@@ -268,6 +307,7 @@ class LanguageTutorApp(App):
         self.query_one("#exercise-display", TextArea).read_only = True
 
         self.load_config()  # Restore config on start
+        self.load_state(auto=True)
         api_key = os.getenv("OPENROUTER_API_KEY")
         if api_key:
             llm.set_api_key(api_key)
@@ -517,6 +557,10 @@ class LanguageTutorApp(App):
             # Reset button state
             check_btn.loading = False
             check_btn.disabled = False
+
+    def on_shutdown(self) -> None:
+        """Automatically save the application state when exiting."""
+        self.save_state(auto=True)
 
 
 def run_app():

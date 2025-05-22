@@ -71,6 +71,8 @@ class LanguageTutorGUI(QMainWindow):
         self._setup_menu()
         self._load_config()
 
+        # Restore previous session if available
+        self.load_state(auto=True)
         # Configure LLM
         env_path = os.path.join(get_config_dir(), ".env")
         if os.path.exists(env_path):
@@ -662,23 +664,42 @@ class LanguageTutorGUI(QMainWindow):
     def _on_check_clicked(self):
         """Handle check button click."""
         run_async(self._check_writing())
-
-    def save_state(self):
+    def save_state(self, *_, path: str | None = None, auto: bool = False):
         """Save the current application state."""
+        if path is None and not auto:
+            path, _ = QFileDialog.getSaveFileName(
+                self,
+                "Save State",
+                get_state_path().replace(".json", ".lts"),
+                "Language Tutor State (*.lts);;JSON (*.json)"
+            )
+        if path is None or path == "":
+            path = get_state_path()
         try:
-            self.state.save()
-            self.statusBar().showMessage("State saved successfully.", 3000)
+            self.state.save(path)
+            if not auto:
+                self.statusBar().showMessage("State saved successfully.", 3000)
         except Exception as e:
             QMessageBox.critical(self, "Error Saving State", str(e))
-
-    def load_state(self):
+    
+    def load_state(self, *_, path: str | None = None, auto: bool = False):
         """Load the application state."""
-        if not os.path.exists(get_state_path()):
-            self.statusBar().showMessage("No saved state found.", 3000)
+        if path is None and not auto:
+            path, _ = QFileDialog.getOpenFileName(
+                self,
+                "Load State",
+                get_state_path().replace(".json", ".lts"),
+                "Language Tutor State (*.lts *.json)"
+            )
+        if path is None or path == "":
+            path = get_state_path()
+        if not os.path.exists(path):
+            if not auto:
+                self.statusBar().showMessage("No saved state found.", 3000)
             return
 
         try:
-            state = LanguageTutorState.load()
+            state = LanguageTutorState.load(path)
             self.state = state
 
             # Restore language first (this will reload definitions)
@@ -797,3 +818,10 @@ class LanguageTutorGUI(QMainWindow):
             # Reload API key
             llm.set_api_key(os.getenv("OPENROUTER_API_KEY", ""))
             self.statusBar().showMessage("Settings updated successfully.", 3000)
+
+    def closeEvent(self, event):
+        """Automatically save state when the window is closed."""
+        try:
+            self.save_state(auto=True)
+        finally:
+            super().closeEvent(event)
