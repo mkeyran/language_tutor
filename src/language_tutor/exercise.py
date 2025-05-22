@@ -84,6 +84,37 @@ Optional hints go here. You can add useful phrases in addition to the hints. If 
     return exercise_text, hints, cost
 
 
+async def generate_custom_hints(language, level, exercise_text):
+    """Generate hints for a user-provided exercise text.
+
+    Args:
+        language (str): Target language code.
+        level (str): Proficiency level of the learner.
+        exercise_text (str): The custom exercise provided by the user.
+
+    Returns:
+        tuple: (hints, cost)
+    """
+    prompt = f"""Provide helpful hints or useful phrases for the following {language} writing exercise aimed at level {level} learners:
+{exercise_text}
+
+Format the output EXACTLY like this using XML tags:
+<hints>
+Your hints here or \"None.\"
+</hints>
+"""
+
+    messages = [{"role": "user", "content": prompt}]
+    response, cost = await llm.completion(model=OR_MODEL_NAME, messages=messages)
+
+    full_response_content = response.choices[0].message.content
+    logger.info(f"Custom hints response: {full_response_content}")
+    hints = extract_content_from_xml(full_response_content, "hints", "")
+    logger.info(f"Custom hints: {hints}")
+
+    return hints, cost
+
+
 def extract_annotated_errors(content):
     """Extract text references and explanations from annotated error content.
 
