@@ -16,7 +16,11 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QKeySequence
 
-from language_tutor.config import AI_MODELS, get_config_path
+from language_tutor.config import (
+    AI_MODELS,
+    get_config_path,
+    DEFAULT_TEXT_FONT_SIZE,
+)
 from language_tutor.qa import answer_question
 from language_tutor.async_runner import run_async
 
@@ -33,6 +37,7 @@ class QADialog(QDialog):
         self.last_query = ""
         self.last_response = ""
         self.last_cost = 0.0
+        self.text_font_size = DEFAULT_TEXT_FONT_SIZE
 
         self.setWindowTitle("Ask AI Assistant")
         self.resize(600, 500)
@@ -96,6 +101,8 @@ class QADialog(QDialog):
         self.answer_display.setPlaceholderText("AI's answer will appear here...")
         self.cost_display.setText("Cost: unknown")
 
+        self._apply_font_size()
+
     def showEvent(self, event):
         """Override showEvent to set focus to the question input when dialog is shown."""
         super().showEvent(event)
@@ -108,6 +115,9 @@ class QADialog(QDialog):
                 with open(get_config_path(), "r") as f:
                     config = json.load(f)
                     model = config.get("qa_model", AI_MODELS[0][1])
+                    self.text_font_size = config.get(
+                        "text_font_size", DEFAULT_TEXT_FONT_SIZE
+                    )
 
                     # Find the index in the combo box
                     for i in range(self.model_select.count()):
@@ -115,9 +125,16 @@ class QADialog(QDialog):
                             self.model_select.setCurrentIndex(i)
                             self.selected_model = model
                             break
+                    self._apply_font_size()
         except:
             # If loading fails, set the default model
             self.selected_model = AI_MODELS[0][1]
+
+    def _apply_font_size(self):
+        """Apply the configured font size to text areas."""
+        style = f"font-size: {self.text_font_size}px;"
+        self.question_input.setStyleSheet(style)
+        self.answer_display.setStyleSheet(style)
 
     def _on_model_changed(self, index):
         """Handle model selection changes."""
