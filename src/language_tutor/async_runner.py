@@ -1,8 +1,22 @@
 """Helper to run asynchronous coroutines in GUI applications."""
 
 import asyncio
-import nest_asyncio
-from PyQt5.QtWidgets import QApplication
+try:
+    import nest_asyncio
+except Exception:  # pragma: no cover - fallback when dependency missing
+    class _NestAsyncIO:
+        def apply(self):
+            pass
+
+    nest_asyncio = _NestAsyncIO()  # type: ignore
+
+try:
+    from PyQt5.QtWidgets import QApplication
+except Exception:  # pragma: no cover - fallback when dependency missing
+    class QApplication:
+        @staticmethod
+        def processEvents():
+            pass
 
 
 def run_async(coro, in_q_application=True):
