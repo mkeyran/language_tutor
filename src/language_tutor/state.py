@@ -1,13 +1,12 @@
-from dataclasses import dataclass, asdict, field
 import json
 import os
+from dataclasses import asdict, dataclass, field
 from typing import Optional
+
 try:
     import tomllib as toml  # Python 3.11+
 except ModuleNotFoundError:  # pragma: no cover - fallback for older versions
     import toml
-
-from .utils import strip_html_tags
 
 from .config import get_state_path
 
@@ -68,15 +67,14 @@ class LanguageTutorState:
                 data = toml.load(f)
         return cls(**data)
 
-
     def to_markdown(self) -> str:
         """Return a Markdown representation of the current state."""
-        exercise = strip_html_tags(self.generated_exercise or "")
-        hints = strip_html_tags(self.generated_hints or "")
-        writing = strip_html_tags(self.writing_input or "")
-        mistakes = strip_html_tags(self.writing_mistakes or "")
-        style = strip_html_tags(self.style_errors or "")
-        recs = strip_html_tags(self.recommendations or "")
+        exercise = self.generated_exercise or ""
+        hints = self.generated_hints or ""
+        writing = self.writing_input or ""
+        mistakes = self.writing_mistakes or ""
+        style = self.style_errors or ""
+        recs = self.recommendations or ""
         return f"""# Language Tutor Export
 
 **Language:** {self.selected_language}
@@ -101,4 +99,3 @@ class LanguageTutorState:
 ## Recommendations
 {recs if recs else "None."}
 """
-
