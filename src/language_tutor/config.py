@@ -1,7 +1,16 @@
 """Configuration and constants for the Language Tutor app."""
 
 import os
-from litellm.types.utils import CostPerToken
+
+try:
+    from litellm.types.utils import CostPerToken
+except Exception:  # pragma: no cover - fallback when litellm is unavailable
+    from dataclasses import dataclass
+
+    @dataclass
+    class CostPerToken:  # type: ignore[override]
+        input_cost_per_token: float
+        output_cost_per_token: float
 
 # Default UI settings
 DEFAULT_TEXT_FONT_SIZE = 14
