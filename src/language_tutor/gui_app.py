@@ -27,7 +27,7 @@ from PyQt5.QtWidgets import (
     QFormLayout,
     QGroupBox,
 )
-from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtCore import Qt, QTimer, QFileSystemWatcher
 from PyQt5.QtGui import QFont, QTextDocument, QKeySequence, QTextCursor, QColor
 
 from language_tutor.config import (
@@ -66,6 +66,16 @@ class LanguageTutorGUI(QMainWindow):
 
         # Centralize application state
         self.state = LanguageTutorState()
+
+        # File sync helpers
+        self.file_sync_enabled = False
+        self.file_sync_path = ""
+        self._sync_watcher = QFileSystemWatcher(self)
+        self._sync_watcher.fileChanged.connect(self._on_sync_file_changed)
+        self._save_timer = QTimer(self)
+        self._save_timer.setSingleShot(True)
+        self._save_timer.timeout.connect(self._save_sync_file)
+        self._setting_text_from_sync = False
 
         # Convenience aliases to keep code readable
         # Access state fields via properties defined below
@@ -374,6 +384,8 @@ class LanguageTutorGUI(QMainWindow):
                 self.text_font_size = config.get(
                     "text_font_size", DEFAULT_TEXT_FONT_SIZE
                 )
+                self.file_sync_enabled = config.get("file_sync_enabled", False)
+                self.file_sync_path = config.get("file_sync_path", "")
 
                 if lang:
                     index = next(
@@ -390,6 +402,7 @@ class LanguageTutorGUI(QMainWindow):
                 self.statusBar().showMessage(
                     f"Loaded config: Language={lang}, Level={level}", 3000
                 )
+                self._configure_file_sync()
                 self._apply_font_size()
             except Exception as e:
                 self.statusBar().showMessage(f"Error loading config: {str(e)}", 5000)
@@ -409,6 +422,8 @@ class LanguageTutorGUI(QMainWindow):
                 "selected_language": self.selected_language,
                 "selected_level": self.selected_level,
                 "text_font_size": self.text_font_size,
+                "file_sync_enabled": self.file_sync_enabled,
+                "file_sync_path": self.file_sync_path,
             }
         )
         try:
@@ -499,10 +514,32 @@ class LanguageTutorGUI(QMainWindow):
         ]:
             te.setStyleSheet(style)
 
+    def _configure_file_sync(self):
+        """Configure file syncing based on current settings."""
+        self._save_timer.stop()
+        self._sync_watcher.removePaths(self._sync_watcher.files())
+        if self.file_sync_enabled and self.file_sync_path:
+            self._sync_watcher.addPath(self.file_sync_path)
+            if os.path.exists(self.file_sync_path):
+                try:
+                    with open(self.file_sync_path, "r") as f:
+                        text = f.read()
+                    self._setting_text_from_sync = True
+                    self.writing_input_area.setText(text)
+                    self._setting_text_from_sync = False
+                except Exception as e:
+                    self.statusBar().showMessage(
+                        f"Error reading sync file: {e}", 5000
+                    )
+
     def _on_writing_changed(self):
         """Handle changes in the writing input."""
         self.writing_input = self.writing_input_area.toPlainText()
         self._update_word_count()
+        if self._setting_text_from_sync:
+            return
+        if self.file_sync_enabled and self.file_sync_path:
+            self._save_timer.start(3000)
 
     def _update_word_count(self):
         """Update the word count in the status bar."""
@@ -529,6 +566,31 @@ class LanguageTutorGUI(QMainWindow):
                 self.word_count_status.setStyleSheet("color: red;")
             else:
                 self.word_count_status.setStyleSheet("")
+
+    def _save_sync_file(self):
+        """Write the current writing input to the sync file."""
+        if not (self.file_sync_enabled and self.file_sync_path):
+            return
+        try:
+            with open(self.file_sync_path, "w") as f:
+                f.write(self.writing_input)
+        except Exception as e:
+            self.statusBar().showMessage(f"Error writing sync file: {e}", 5000)
+
+    def _on_sync_file_changed(self, path):
+        """Reload writing when the sync file is modified."""
+        if not self.file_sync_enabled or path != self.file_sync_path:
+            return
+        if not os.path.exists(path):
+            return
+        try:
+            with open(path, "r") as f:
+                text = f.read()
+            self._setting_text_from_sync = True
+            self.writing_input_area.setText(text)
+            self._setting_text_from_sync = False
+        except Exception as e:
+            self.statusBar().showMessage(f"Error reading sync file: {e}", 5000)
 
     async def _generate_exercise(self):
         """Generate a new exercise."""

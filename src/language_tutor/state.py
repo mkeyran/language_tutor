@@ -1,5 +1,6 @@
 import json
 import os
+import re
 from dataclasses import asdict, dataclass, field
 from typing import Optional
 
@@ -9,6 +10,14 @@ except ModuleNotFoundError:  # pragma: no cover - fallback for older versions
     import toml
 
 from .config import get_state_path
+
+
+_TAG_RE = re.compile(r"<[^>]+>")
+
+
+def _strip_html(text: str) -> str:
+    """Remove simple HTML tags from ``text``."""
+    return _TAG_RE.sub("", text)
 
 
 @dataclass
@@ -69,12 +78,12 @@ class LanguageTutorState:
 
     def to_markdown(self) -> str:
         """Return a Markdown representation of the current state."""
-        exercise = self.generated_exercise or ""
-        hints = self.generated_hints or ""
-        writing = self.writing_input or ""
-        mistakes = self.writing_mistakes or ""
-        style = self.style_errors or ""
-        recs = self.recommendations or ""
+        exercise = _strip_html(self.generated_exercise or "")
+        hints = _strip_html(self.generated_hints or "")
+        writing = _strip_html(self.writing_input or "")
+        mistakes = _strip_html(self.writing_mistakes or "")
+        style = _strip_html(self.style_errors or "")
+        recs = _strip_html(self.recommendations or "")
         return f"""# Language Tutor Export
 
 **Language:** {self.selected_language}

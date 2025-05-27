@@ -1,6 +1,7 @@
 """Configuration and constants for the Language Tutor app."""
 
 import os
+import json
 
 try:
     from litellm.types.utils import CostPerToken
@@ -91,3 +92,23 @@ def get_export_path():
     if not os.path.exists(path):
         os.makedirs(path)
     return path
+
+
+def load_config() -> dict:
+    """Load JSON configuration."""
+    path = get_config_path()
+    if os.path.exists(path):
+        try:
+            with open(path, "r") as f:
+                return json.load(f)
+        except Exception:
+            return {}
+    return {}
+
+
+def save_config(data: dict) -> None:
+    """Merge and save configuration to disk."""
+    cfg = load_config()
+    cfg.update(data)
+    with open(get_config_path(), "w") as f:
+        json.dump(cfg, f)
