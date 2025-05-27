@@ -162,5 +162,4 @@ def format_mistakes_with_hover(mistakes, mistakes_type):
             return_text += f"* **{error_text}**: {explanation}\n"
         else:
             return_text += f"* {explanation}\n"
-    print(return_text)
     return return_text
