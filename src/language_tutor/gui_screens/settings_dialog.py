@@ -1,7 +1,6 @@
 """Settings Dialog module for language tutor application."""
 
 import os
-import json
 from language_tutor.llm import llm
 from PyQt5.QtWidgets import (
     QDialog,
@@ -12,12 +11,15 @@ from PyQt5.QtWidgets import (
     QHBoxLayout,
     QMessageBox,
     QSpinBox,
+    QCheckBox,
+    QFileDialog,
 )
 
 from language_tutor.config import (
-    get_config_path,
     get_config_dir,
     DEFAULT_TEXT_FONT_SIZE,
+    load_config,
+    save_config,
 )
 
 
@@ -33,7 +35,7 @@ class SettingsDialog(QDialog):
         
         self._setup_ui()
         self._load_api_key()
-        self._load_font_size()
+        self._load_config()
     
     def _setup_ui(self):
         """Set up the UI components."""
@@ -52,6 +54,18 @@ class SettingsDialog(QDialog):
         self.font_size_input.setRange(8, 48)
         self.font_size_input.setValue(DEFAULT_TEXT_FONT_SIZE)
         layout.addWidget(self.font_size_input)
+
+        # File sync settings
+        self.sync_checkbox = QCheckBox("Enable Writing File Sync")
+        layout.addWidget(self.sync_checkbox)
+
+        path_layout = QHBoxLayout()
+        self.sync_path_input = QLineEdit()
+        path_layout.addWidget(self.sync_path_input)
+        browse_btn = QPushButton("Browse")
+        browse_btn.clicked.connect(self._browse_sync_path)
+        path_layout.addWidget(browse_btn)
+        layout.addLayout(path_layout)
         
         # Status message
         self.status_label = QLabel("")
@@ -87,15 +101,15 @@ class SettingsDialog(QDialog):
         except Exception as e:
             self.status_label.setText(f"Error: {str(e)}")
 
-    def _load_font_size(self):
-        """Load text font size from the config file."""
+    def _load_config(self):
+        """Load configuration values from ``config.json``."""
         try:
-            if os.path.exists(get_config_path()):
-                with open(get_config_path(), "r") as f:
-                    config = json.load(f)
-                    size = config.get("text_font_size")
-                    if isinstance(size, int):
-                        self.font_size_input.setValue(size)
+            cfg = load_config()
+            size = cfg.get("text_font_size")
+            if isinstance(size, int):
+                self.font_size_input.setValue(size)
+            self.sync_checkbox.setChecked(bool(cfg.get("file_sync_enabled", False)))
+            self.sync_path_input.setText(cfg.get("file_sync_path", ""))
         except Exception as e:
             self.status_label.setText(f"Error: {str(e)}")
     
@@ -112,23 +126,21 @@ class SettingsDialog(QDialog):
             # Ensure config directory exists
             config_dir = get_config_dir()
             env_path = os.path.join(config_dir, ".env")
-            
+
             # Create or update the .env file
             with open(env_path, "w") as f:
                 f.write(f"OPENROUTER_API_KEY={api_key}\n")
-            
+
             os.environ["OPENROUTER_API_KEY"] = api_key
             llm.set_api_key(api_key)
-            
-            # Save font size to config.json
-            if os.path.exists(get_config_path()):
-                with open(get_config_path(), "r") as f:
-                    config = json.load(f)
-            else:
-                config = {}
-            config["text_font_size"] = font_size
-            with open(get_config_path(), "w") as f:
-                json.dump(config, f)
+
+            save_config(
+                {
+                    "text_font_size": font_size,
+                    "file_sync_enabled": self.sync_checkbox.isChecked(),
+                    "file_sync_path": self.sync_path_input.text().strip(),
+                }
+            )
 
             self.status_label.setText("Settings saved successfully!")
             self.status_label.setStyleSheet("color: green;")
@@ -140,4 +152,10 @@ class SettingsDialog(QDialog):
         except Exception as e:
             self.status_label.setText(f"Error saving API key: {str(e)}")
             self.status_label.setStyleSheet("color: red;")
+
+    def _browse_sync_path(self):
+        """Open a file dialog to select the sync file."""
+        path, _ = QFileDialog.getSaveFileName(self, "Select Sync File", "", "Text Files (*.txt);;All Files (*)")
+        if path:
+            self.sync_path_input.setText(path)
 
