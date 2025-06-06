@@ -38,7 +38,9 @@ class LiteLLM(LLM):
     def get_base_url(self) -> str:
         return self._litellm.base_url
 
-    async def completion(self, model: str, messages: List[dict], **kwargs: Any) -> Tuple[Any, Optional[float]]:
+    async def completion(
+        self, model: str, messages: List[dict], **kwargs: Any
+    ) -> Tuple[Any, Optional[float]]:
         response = await self._litellm.acompletion(
             model=model,
             messages=messages,
@@ -50,5 +52,9 @@ class LiteLLM(LLM):
 
         model_name = model.split("/")[-1].split(":")[0]
         cost_info = MODEL_PRICE_PER_TOKEN.get(model_name)
-        cost = completion_cost(response, custom_cost_per_token=cost_info) if cost_info else None
+        cost = (
+            completion_cost(response, custom_cost_per_token=cost_info)
+            if cost_info
+            else None
+        )
         return response, cost

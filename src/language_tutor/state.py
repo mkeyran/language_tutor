@@ -4,10 +4,7 @@ import re
 from dataclasses import asdict, dataclass, field
 from typing import Optional
 
-try:
-    import tomllib as toml  # Python 3.11+
-except ModuleNotFoundError:  # pragma: no cover - fallback for older versions
-    import toml
+import toml
 
 from .config import get_state_path
 
