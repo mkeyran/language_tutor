@@ -5,7 +5,7 @@ import pytest
 from unittest.mock import Mock, patch, AsyncMock
 from dataclasses import dataclass
 
-from language_tutor.llm import llm, use_llm, get_llm
+from language_tutor.llm import get_llm, set_llm
 from language_tutor.llms.base import LLM
 from language_tutor.llms.lite import LiteLLM
 
@@ -57,18 +57,18 @@ class TestLLMInterface:
         current_llm = get_llm()
         assert isinstance(current_llm, LiteLLM)
     
-    def test_use_llm_changes_global_instance(self):
-        """Test that use_llm changes the global LLM instance."""
+    def test_set_llm_changes_global_instance(self):
+        """Test that set_llm changes the global LLM instance."""
         original_llm = get_llm()
         mock_llm = MockLLM()
         
         try:
-            use_llm(mock_llm)
+            set_llm(mock_llm)
             assert get_llm() is mock_llm
             assert get_llm() is not original_llm
         finally:
             # Restore original LLM
-            use_llm(original_llm)
+            set_llm(original_llm)
     
     def test_get_llm_returns_current_instance(self):
         """Test that get_llm returns the currently configured instance."""
@@ -76,11 +76,11 @@ class TestLLMInterface:
         original_llm = get_llm()
         
         try:
-            use_llm(mock_llm)
+            set_llm(mock_llm)
             current = get_llm()
             assert current is mock_llm
         finally:
-            use_llm(original_llm)
+            set_llm(original_llm)
 
 
 class TestLiteLLM:
@@ -431,7 +431,7 @@ class TestLLMIntegration:
         
         try:
             # Switch to mock LLM
-            use_llm(mock_llm)
+            set_llm(mock_llm)
             current_llm = get_llm()
             assert current_llm is mock_llm
             
@@ -442,7 +442,7 @@ class TestLLMIntegration:
             
         finally:
             # Restore original LLM
-            use_llm(original_llm)
+            set_llm(original_llm)
     
     def test_llm_configuration_persistence(self):
         """Test that LLM configuration persists after switching."""
@@ -455,7 +455,7 @@ class TestLLMIntegration:
             mock_llm.set_base_url("https://test.com")
             
             # Switch to mock LLM
-            use_llm(mock_llm)
+            set_llm(mock_llm)
             current_llm = get_llm()
             
             # Verify configuration persists
@@ -464,4 +464,4 @@ class TestLLMIntegration:
             assert current_llm.is_configured() is True
             
         finally:
-            use_llm(original_llm)
+            set_llm(original_llm)

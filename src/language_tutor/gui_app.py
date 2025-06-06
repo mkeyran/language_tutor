@@ -4,7 +4,7 @@ import os
 import json
 import random
 import datetime
-from language_tutor.llm import llm
+from language_tutor.llm import create_provider, LLMProvider
 from dotenv import load_dotenv
 from PyQt5.QtWidgets import (
     QMainWindow,
@@ -53,8 +53,14 @@ from language_tutor.feedback_handler import FeedbackHandler, format_mistakes_wit
 class LanguageTutorGUI(QMainWindow):
     """PyQt GUI for Language Tutor application."""
 
-    def __init__(self, exercise_types, exercise_definitions):
-        """Initialize the GUI with exercise types and definitions."""
+    def __init__(self, exercise_types, exercise_definitions, llm_provider: LLMProvider | None = None):
+        """Initialize the GUI with exercise types and definitions.
+        
+        Args:
+            exercise_types: Available exercise types
+            exercise_definitions: Exercise definitions
+            llm_provider (LLMProvider, optional): LLM provider to use. Creates default if None.
+        """
         super().__init__()
 
         self.exercise_types_all = exercise_types
@@ -63,6 +69,9 @@ class LanguageTutorGUI(QMainWindow):
         self.exercise_types = []
 
         self.text_font_size = DEFAULT_TEXT_FONT_SIZE
+        
+        # Initialize LLM provider
+        self.llm_provider = llm_provider or create_provider()
 
         # Centralize application state
         self.state = LanguageTutorState()
@@ -95,6 +104,8 @@ class LanguageTutorGUI(QMainWindow):
         env_path = os.path.join(get_config_dir(), ".env")
         if os.path.exists(env_path):
             load_dotenv(env_path)
+        
+        llm = self.llm_provider.get_llm()
         llm.set_api_key(os.getenv("OPENROUTER_API_KEY", ""))
         llm.set_base_url("https://openrouter.ai/api/v1")
 
@@ -645,6 +656,7 @@ class LanguageTutorGUI(QMainWindow):
                     language=self.selected_language,
                     level=self.selected_level,
                     exercise_text=custom_text,
+                    llm_provider=self.llm_provider,
                 )
 
                 self.generated_exercise = custom_text
@@ -696,6 +708,7 @@ class LanguageTutorGUI(QMainWindow):
                 level=self.selected_level,
                 exercise_type=self.selected_exercise,
                 definitions=self.exercise_definitions,
+                llm_provider=self.llm_provider,
             )
 
             # Update stored values
@@ -760,6 +773,7 @@ class LanguageTutorGUI(QMainWindow):
                 writing_input=self.writing_input,
                 exercise_type=self.selected_exercise,
                 definitions=self.exercise_definitions,
+                llm_provider=self.llm_provider,
             )
 
             # Store raw feedback for state restoration
@@ -940,7 +954,7 @@ class LanguageTutorGUI(QMainWindow):
             )
             return
 
-        dialog = QADialog(self)
+        dialog = QADialog(self, self.llm_provider)
         dialog.set_context(
             {
                 "language": self.selected_language,
@@ -958,7 +972,7 @@ class LanguageTutorGUI(QMainWindow):
 
     def open_settings_dialog(self):
         """Open the settings dialog."""
-        dialog = SettingsDialog(self)
+        dialog = SettingsDialog(self, self.llm_provider)
         result = dialog.exec_()
 
         if result == SettingsDialog.Accepted:

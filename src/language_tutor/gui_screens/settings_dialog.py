@@ -1,7 +1,7 @@
 """Settings Dialog module for language tutor application."""
 
 import os
-from language_tutor.llm import llm
+from language_tutor.llm import LLMProvider
 from PyQt5.QtWidgets import (
     QDialog,
     QVBoxLayout,
@@ -26,9 +26,16 @@ from language_tutor.config import (
 class SettingsDialog(QDialog):
     """A dialog for configuring application settings."""
     
-    def __init__(self, parent=None):
-        """Initialize the settings dialog."""
+    def __init__(self, parent=None, llm_provider: LLMProvider | None = None):
+        """Initialize the settings dialog.
+        
+        Args:
+            parent: Parent widget
+            llm_provider (LLMProvider, optional): LLM provider to configure
+        """
         super().__init__(parent)
+        
+        self.llm_provider = llm_provider
         
         self.setWindowTitle("Settings")
         self.resize(400, 150)
@@ -132,7 +139,8 @@ class SettingsDialog(QDialog):
                 f.write(f"OPENROUTER_API_KEY={api_key}\n")
 
             os.environ["OPENROUTER_API_KEY"] = api_key
-            llm.set_api_key(api_key)
+            if self.llm_provider:
+                self.llm_provider.get_llm().set_api_key(api_key)
 
             save_config(
                 {

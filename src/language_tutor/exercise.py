@@ -2,7 +2,8 @@
 
 import re
 import random
-from language_tutor.llm import llm
+from language_tutor.llm import get_llm, LLMProvider
+from language_tutor.llms import LLM
 from language_tutor.config import OR_MODEL_NAME
 
 # Set up logging to file
@@ -36,14 +37,15 @@ def extract_content_from_xml(text, tag_name, default=""):
     return default
 
 
-async def generate_exercise(language, level, exercise_type, definitions):
-    """Generate a new language exercise using LiteLLM.
+async def generate_exercise(language, level, exercise_type, definitions, llm_provider: LLMProvider | None = None):
+    """Generate a new language exercise using the specified LLM provider.
 
     Args:
         language (str): The language code (e.g., "pl" for Polish)
         level (str): The proficiency level (e.g., "A1")
         exercise_type (str): The type of exercise to generate
         definitions (dict): Dictionary containing exercise definitions
+        llm_provider (LLMProvider, optional): LLM provider to use. Uses default if None.
 
     Returns:
         tuple: (exercise_text, hints, cost)
@@ -70,6 +72,9 @@ Please use markdown for hints formatting.
 """
     messages = [{"role": "user", "content": prompt}]
 
+    # Get LLM instance
+    llm = llm_provider.get_llm() if llm_provider else get_llm()
+
     # Make the async API call
     response, cost = await llm.completion(model=OR_MODEL_NAME, messages=messages)
 
@@ -86,13 +91,14 @@ Please use markdown for hints formatting.
     return exercise_text, hints, cost
 
 
-async def generate_custom_hints(language, level, exercise_text):
+async def generate_custom_hints(language, level, exercise_text, llm_provider: LLMProvider | None = None):
     """Generate hints for a user-provided exercise text.
 
     Args:
         language (str): Target language code.
         level (str): Proficiency level of the learner.
         exercise_text (str): The custom exercise provided by the user.
+        llm_provider (LLMProvider, optional): LLM provider to use. Uses default if None.
 
     Returns:
         tuple: (hints, cost)
@@ -109,6 +115,10 @@ Please use markdown for hints formatting.
 """
 
     messages = [{"role": "user", "content": prompt}]
+    
+    # Get LLM instance
+    llm = llm_provider.get_llm() if llm_provider else get_llm()
+    
     response, cost = await llm.completion(model=OR_MODEL_NAME, messages=messages)
 
     full_response_content = response.choices[0].message.content
@@ -148,9 +158,9 @@ def extract_annotated_errors(content):
 
 
 async def check_writing(
-    language, level, exercise_text, writing_input, exercise_type, definitions
+    language, level, exercise_text, writing_input, exercise_type, definitions, llm_provider: LLMProvider | None = None
 ):
-    """Check the user's writing using LiteLLM.
+    """Check the user's writing using the specified LLM provider.
 
     Args:
         language (str): The language code (e.g., "pl" for Polish)
@@ -159,6 +169,7 @@ async def check_writing(
         writing_input (str): The user's written response
         exercise_type (str): The type of exercise
         definitions (dict): Dictionary containing exercise definitions
+        llm_provider (LLMProvider, optional): LLM provider to use. Uses default if None.
 
     Returns:
         tuple: (mistakes_list, style_errors_list, recommendations, cost)
@@ -206,6 +217,9 @@ List of recommendations for improvement
 """
     messages = [{"role": "user", "content": prompt}]
     model_name = OR_MODEL_NAME_CHECK
+
+    # Get LLM instance
+    llm = llm_provider.get_llm() if llm_provider else get_llm()
 
     # Make the async API call
     response, cost = await llm.completion(model=model_name, messages=messages)

@@ -15,11 +15,22 @@ class LiteLLM(LLM):
     DEFAULT_BASE_URL = "https://openrouter.ai/api/v1"
 
     def __init__(self) -> None:
-        import litellm  # local import to avoid unnecessary dependency at import time
-
-        self._litellm = litellm
-        self._litellm.api_key = os.getenv("OPENROUTER_API_KEY", self._litellm.api_key)
-        self._litellm.base_url = os.getenv("OPENROUTER_BASE_URL", self.DEFAULT_BASE_URL)
+        try:
+            import litellm  # local import to avoid unnecessary dependency at import time
+            self._litellm = litellm
+            self._litellm.api_key = os.getenv("OPENROUTER_API_KEY", self._litellm.api_key)
+            self._litellm.base_url = os.getenv("OPENROUTER_BASE_URL", self.DEFAULT_BASE_URL)
+        except ImportError:
+            # For testing without litellm dependency
+            class MockLiteLL:
+                def __init__(self):
+                    self.api_key = None
+                    self.base_url = LiteLLM.DEFAULT_BASE_URL
+                async def acompletion(self, **kwargs):
+                    raise NotImplementedError("litellm not available")
+            self._litellm = MockLiteLL()
+            self._litellm.api_key = os.getenv("OPENROUTER_API_KEY")
+            self._litellm.base_url = os.getenv("OPENROUTER_BASE_URL", self.DEFAULT_BASE_URL)
 
     def set_api_key(self, key: str) -> None:
         self._litellm.api_key = key
@@ -48,13 +59,15 @@ class LiteLLM(LLM):
             **kwargs,
         )
 
-        from litellm import completion_cost
-
-        model_name = model.split("/")[-1].split(":")[0]
-        cost_info = MODEL_PRICE_PER_TOKEN.get(model_name)
-        cost = (
-            completion_cost(response, custom_cost_per_token=cost_info)
-            if cost_info
-            else None
-        )
+        try:
+            from litellm import completion_cost
+            model_name = model.split("/")[-1].split(":")[0]
+            cost_info = MODEL_PRICE_PER_TOKEN.get(model_name)
+            cost = (
+                completion_cost(response, custom_cost_per_token=cost_info)
+                if cost_info
+                else None
+            )
+        except ImportError:
+            cost = None
         return response, cost

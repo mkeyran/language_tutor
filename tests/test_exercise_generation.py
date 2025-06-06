@@ -13,6 +13,8 @@ from language_tutor.exercise import (
     check_writing,
     format_mistakes_list
 )
+from language_tutor.llm import create_provider
+from language_tutor.llms.base import LLM
 
 
 class TestXMLExtraction:
@@ -186,19 +188,22 @@ def sample_definitions():
 class TestExerciseGeneration:
     """Tests for exercise generation functionality."""
     
-    @patch('language_tutor.exercise.llm')
     @pytest.mark.asyncio
-    async def test_generate_exercise_success(self, mock_llm, sample_definitions):
+    async def test_generate_exercise_success(self, sample_definitions):
         """Test successful exercise generation."""
         # Mock LLM response
         response_content = """<exercise>Write about your favorite hobby</exercise>
         <hints>Use present tense. Include specific details.</hints>"""
         
         mock_response = create_mock_response(response_content)
+        mock_llm = Mock(spec=LLM)
         mock_llm.completion = AsyncMock(return_value=(mock_response, 0.02))
         
+        # Create provider with mock LLM
+        llm_provider = create_provider(mock_llm)
+        
         exercise_text, hints, cost = await generate_exercise(
-            "English", "B1", "Essay", sample_definitions
+            "English", "B1", "Essay", sample_definitions, llm_provider=llm_provider
         )
         
         assert exercise_text == "Write about your favorite hobby"
@@ -206,55 +211,61 @@ class TestExerciseGeneration:
         assert cost == 0.02
         mock_llm.completion.assert_called_once()
     
-    @patch('language_tutor.exercise.llm')
     @pytest.mark.asyncio
-    async def test_generate_exercise_no_hints(self, mock_llm, sample_definitions):
+    async def test_generate_exercise_no_hints(self, sample_definitions):
         """Test exercise generation with no hints."""
         response_content = """<exercise>Describe your hometown</exercise>
         <hints>None.</hints>"""
         
         mock_response = create_mock_response(response_content)
-        
+        mock_llm = Mock(spec=LLM)
         mock_llm.completion = AsyncMock(return_value=(mock_response, 0.01))
         
+        # Create provider with mock LLM
+        llm_provider = create_provider(mock_llm)
+        
         exercise_text, hints, cost = await generate_exercise(
-            "Polish", "A2", "Letter", sample_definitions
+            "Polish", "A2", "Letter", sample_definitions, llm_provider=llm_provider
         )
         
         assert exercise_text == "Describe your hometown"
         assert hints == ""  # Should be empty when "None."
     
-    @patch('language_tutor.exercise.llm')
     @pytest.mark.asyncio
-    async def test_generate_custom_hints(self, mock_llm):
+    async def test_generate_custom_hints(self):
         """Test custom hints generation."""
         response_content = """<hints>Focus on descriptive language. Use past tense for actions.</hints>"""
         
         mock_response = create_mock_response(response_content)
-        
+        mock_llm = Mock(spec=LLM)
         mock_llm.completion = AsyncMock(return_value=(mock_response, 0.015))
         
+        # Create provider with mock LLM
+        llm_provider = create_provider(mock_llm)
+        
         hints, cost = await generate_custom_hints(
-            "Spanish", "B2", "Write about a memorable vacation"
+            "Spanish", "B2", "Write about a memorable vacation", llm_provider=llm_provider
         )
         
         assert "descriptive language" in hints
         assert "past tense" in hints
         assert cost == 0.015
     
-    @patch('language_tutor.exercise.llm')
     @patch('language_tutor.exercise.logger')
     @pytest.mark.asyncio
-    async def test_generate_exercise_logging(self, mock_logger, mock_llm, sample_definitions):
+    async def test_generate_exercise_logging(self, mock_logger, sample_definitions):
         """Test that exercise generation logs appropriately."""
         response_content = """<exercise>Test exercise</exercise>
         <hints>Test hints</hints>"""
         
         mock_response = create_mock_response(response_content)
-        
+        mock_llm = Mock(spec=LLM)
         mock_llm.completion = AsyncMock(return_value=(mock_response, 0.01))
         
-        await generate_exercise("English", "B1", "Essay", sample_definitions)
+        # Create provider with mock LLM
+        llm_provider = create_provider(mock_llm)
+        
+        await generate_exercise("English", "B1", "Essay", sample_definitions, llm_provider=llm_provider)
         
         # Verify logging calls
         assert mock_logger.info.call_count >= 3  # Response, exercise, hints
@@ -263,9 +274,8 @@ class TestExerciseGeneration:
 class TestWritingCheck:
     """Tests for writing checking functionality."""
     
-    @patch('language_tutor.exercise.llm')
     @pytest.mark.asyncio
-    async def test_check_writing_success(self, mock_llm, sample_definitions):
+    async def test_check_writing_success(self, sample_definitions):
         """Test successful writing check."""
         feedback_content = """<mistakes>
         - <text>I goes</text> Subject-verb disagreement: use 'I go'
@@ -281,12 +291,15 @@ class TestWritingCheck:
         </recommendations>"""
         
         mock_response = create_mock_response(feedback_content)
-        
+        mock_llm = Mock(spec=LLM)
         mock_llm.completion = AsyncMock(return_value=(mock_response, 0.03))
+        
+        # Create provider with mock LLM
+        llm_provider = create_provider(mock_llm)
         
         mistakes, style_errors, recommendations, cost = await check_writing(
             "English", "B1", "Write about hobbies", "I goes to gym very good", 
-            "Essay", sample_definitions
+            "Essay", sample_definitions, llm_provider=llm_provider
         )
         
         assert len(mistakes) == 2
@@ -299,9 +312,8 @@ class TestWritingCheck:
         assert "varied vocabulary" in recommendations
         assert cost == 0.03
     
-    @patch('language_tutor.exercise.llm')
     @pytest.mark.asyncio
-    async def test_check_writing_no_errors(self, mock_llm, sample_definitions):
+    async def test_check_writing_no_errors(self, sample_definitions):
         """Test writing check with no errors found."""
         feedback_content = """<mistakes>
         None.
@@ -316,32 +328,37 @@ class TestWritingCheck:
         </recommendations>"""
         
         mock_response = create_mock_response(feedback_content)
-        
+        mock_llm = Mock(spec=LLM)
         mock_llm.completion = AsyncMock(return_value=(mock_response, 0.02))
+        
+        # Create provider with mock LLM
+        llm_provider = create_provider(mock_llm)
         
         mistakes, style_errors, recommendations, cost = await check_writing(
             "English", "C1", "Excellent essay", "This is well-written text.", 
-            "Essay", sample_definitions
+            "Essay", sample_definitions, llm_provider=llm_provider
         )
         
         assert len(mistakes) == 0
         assert len(style_errors) == 0
         assert "Good work" in recommendations
     
-    @patch('language_tutor.exercise.llm')
     @patch('language_tutor.exercise.logger')
     @pytest.mark.asyncio
-    async def test_check_writing_logging(self, mock_logger, mock_llm, sample_definitions):
+    async def test_check_writing_logging(self, mock_logger, sample_definitions):
         """Test that writing check logs feedback and results."""
         feedback_content = """<mistakes>None.</mistakes>
         <stylistic_errors>None.</stylistic_errors>
         <recommendations>Keep practicing!</recommendations>"""
         
         mock_response = create_mock_response(feedback_content)
-        
+        mock_llm = Mock(spec=LLM)
         mock_llm.completion = AsyncMock(return_value=(mock_response, 0.01))
         
-        await check_writing("English", "A1", "Test", "Text", "Essay", sample_definitions)
+        # Create provider with mock LLM
+        llm_provider = create_provider(mock_llm)
+        
+        await check_writing("English", "A1", "Test", "Text", "Essay", sample_definitions, llm_provider=llm_provider)
         
         # Verify logging calls for feedback response and parsed results
         assert mock_logger.info.call_count >= 4
@@ -350,18 +367,20 @@ class TestWritingCheck:
 class TestPromptConstruction:
     """Tests for prompt construction in exercise functions."""
     
-    @patch('language_tutor.exercise.llm')
     @patch('language_tutor.exercise.random.randint')
     @pytest.mark.asyncio
-    async def test_generate_exercise_prompt_includes_requirements(self, mock_randint, mock_llm, sample_definitions):
+    async def test_generate_exercise_prompt_includes_requirements(self, mock_randint, sample_definitions):
         """Test that exercise generation prompt includes definition requirements."""
         mock_randint.return_value = 1234
         
         mock_response = create_mock_response("<exercise>Test</exercise><hints>None.</hints>")
-        
+        mock_llm = Mock(spec=LLM)
         mock_llm.completion = AsyncMock(return_value=(mock_response, 0.01))
         
-        await generate_exercise("English", "B1", "Essay", sample_definitions)
+        # Create provider with mock LLM
+        llm_provider = create_provider(mock_llm)
+        
+        await generate_exercise("English", "B1", "Essay", sample_definitions, llm_provider=llm_provider)
         
         # Check that the prompt included the requirements
         call_args = mock_llm.completion.call_args
@@ -374,17 +393,19 @@ class TestPromptConstruction:
         assert "100" in prompt and "200" in prompt  # Expected length
         assert "1234" in prompt  # Random number
     
-    @patch('language_tutor.exercise.llm')
     @pytest.mark.asyncio
-    async def test_check_writing_prompt_construction(self, mock_llm, sample_definitions):
+    async def test_check_writing_prompt_construction(self, sample_definitions):
         """Test that writing check prompt is properly constructed."""
         mock_response = create_mock_response("<mistakes>None.</mistakes><stylistic_errors>None.</stylistic_errors><recommendations>Good.</recommendations>")
-        
+        mock_llm = Mock(spec=LLM)
         mock_llm.completion = AsyncMock(return_value=(mock_response, 0.01))
+        
+        # Create provider with mock LLM
+        llm_provider = create_provider(mock_llm)
         
         await check_writing(
             "Spanish", "A2", "Describe your family", "Mi familia es grande", 
-            "Description", sample_definitions
+            "Description", sample_definitions, llm_provider=llm_provider
         )
         
         call_args = mock_llm.completion.call_args

@@ -2,7 +2,7 @@
 
 import json
 import os
-from language_tutor.llm import llm
+from language_tutor.llm import LLMProvider
 from PyQt5.QtWidgets import (
     QDialog,
     QVBoxLayout,
@@ -28,10 +28,16 @@ from language_tutor.async_runner import run_async
 class QADialog(QDialog):
     """A dialog for asking questions to the AI model."""
 
-    def __init__(self, parent=None):
-        """Initialize the QA dialog."""
+    def __init__(self, parent=None, llm_provider: LLMProvider | None = None):
+        """Initialize the QA dialog.
+        
+        Args:
+            parent: Parent widget
+            llm_provider (LLMProvider, optional): LLM provider to use
+        """
         super().__init__(parent)
 
+        self.llm_provider = llm_provider
         self.selected_model = ""
         self.context = {}
         self.last_query = ""
@@ -192,7 +198,7 @@ class QADialog(QDialog):
         try:
             # Use utility function to get answer
             answer, cost = await answer_question(
-                model=self.selected_model, question=question, context=self.context
+                model=self.selected_model, question=question, context=self.context, llm_provider=self.llm_provider
             )
 
             # Update display with Markdown

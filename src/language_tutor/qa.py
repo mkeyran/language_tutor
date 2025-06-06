@@ -1,15 +1,16 @@
 """Question answering utilities for Language Tutor."""
 
-from language_tutor.llm import llm
+from language_tutor.llm import get_llm, LLMProvider
 
 
-async def answer_question(model, question, context):
-    """Answer a question using the specified AI model.
+async def answer_question(model, question, context, llm_provider: LLMProvider | None = None):
+    """Answer a question using the specified AI model and LLM provider.
 
     Args:
         model (str): The AI model identifier
         question (str): The user's question
         context (dict): Dictionary containing context information
+        llm_provider (LLMProvider, optional): LLM provider to use. Uses default if None.
 
     Returns:
         tuple: (answer_text, cost)
@@ -25,6 +26,9 @@ The user's question is:
 
 Please provide a helpful, educational response focused on language learning."""
 
+    # Get LLM instance
+    llm = llm_provider.get_llm() if llm_provider else get_llm()
+    
     # Make the API call
     messages = [{"role": "user", "content": prompt}]
     response, cost = await llm.completion(model=model, messages=messages)

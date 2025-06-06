@@ -1,10 +1,12 @@
 """Tests for question answering functionality."""
 
 import pytest
-from unittest.mock import patch, AsyncMock
+from unittest.mock import Mock, patch, AsyncMock
 from dataclasses import dataclass
 
 from language_tutor.qa import answer_question
+from language_tutor.llm import create_provider
+from language_tutor.llms.base import LLM
 
 
 def create_mock_response(content: str):
@@ -27,12 +29,15 @@ def create_mock_response(content: str):
 class TestAnswerQuestion:
     """Tests for the answer_question function."""
     
-    @patch('language_tutor.qa.llm')
     @pytest.mark.asyncio
-    async def test_answer_question_basic(self, mock_llm):
+    async def test_answer_question_basic(self):
         """Test basic question answering functionality."""
         mock_response = create_mock_response("The present tense of 'to be' is 'am', 'is', or 'are'.")
+        mock_llm = Mock(spec=LLM)
         mock_llm.completion = AsyncMock(return_value=(mock_response, 0.015))
+        
+        # Create provider with mock LLM
+        llm_provider = create_provider(mock_llm)
         
         context = {
             'language': 'English',
@@ -44,7 +49,8 @@ class TestAnswerQuestion:
         answer, cost = await answer_question(
             "gpt-3.5-turbo",
             "What is the present tense of 'to be'?",
-            context
+            context,
+            llm_provider=llm_provider
         )
         
         assert "present tense" in answer
@@ -52,12 +58,15 @@ class TestAnswerQuestion:
         assert cost == 0.015
         mock_llm.completion.assert_called_once()
     
-    @patch('language_tutor.qa.llm')
     @pytest.mark.asyncio
-    async def test_answer_question_prompt_construction(self, mock_llm):
+    async def test_answer_question_prompt_construction(self):
         """Test that the prompt is properly constructed with context."""
         mock_response = create_mock_response("Test response")
+        mock_llm = Mock(spec=LLM)
         mock_llm.completion = AsyncMock(return_value=(mock_response, 0.01))
+        
+        # Create provider with mock LLM
+        llm_provider = create_provider(mock_llm)
         
         context = {
             'language': 'Spanish',
@@ -69,7 +78,8 @@ class TestAnswerQuestion:
         await answer_question(
             "claude-3-opus",
             "How do I use subjunctive mood?",
-            context
+            context,
+            llm_provider=llm_provider
         )
         
         # Check the call arguments
@@ -85,12 +95,15 @@ class TestAnswerQuestion:
         assert 'How do I use subjunctive mood?' in prompt
         assert 'language learning assistant' in prompt
     
-    @patch('language_tutor.qa.llm')
     @pytest.mark.asyncio
-    async def test_answer_question_with_different_models(self, mock_llm):
+    async def test_answer_question_with_different_models(self):
         """Test question answering with different AI models."""
         mock_response = create_mock_response("Model-specific response")
+        mock_llm = Mock(spec=LLM)
         mock_llm.completion = AsyncMock(return_value=(mock_response, 0.02))
+        
+        # Create provider with mock LLM
+        llm_provider = create_provider(mock_llm)
         
         context = {
             'language': 'French',
@@ -109,7 +122,8 @@ class TestAnswerQuestion:
             answer, cost = await answer_question(
                 model,
                 "What's the difference between passé composé and imparfait?",
-                context
+                context,
+                llm_provider=llm_provider
             )
             
             assert answer == "Model-specific response"
@@ -119,12 +133,15 @@ class TestAnswerQuestion:
             call_args = mock_llm.completion.call_args
             assert call_args[1]['model'] == model
     
-    @patch('language_tutor.qa.llm')
     @pytest.mark.asyncio
-    async def test_answer_question_complex_context(self, mock_llm):
+    async def test_answer_question_complex_context(self):
         """Test question answering with complex context information."""
         mock_response = create_mock_response("Detailed grammatical explanation")
+        mock_llm = Mock(spec=LLM)
         mock_llm.completion = AsyncMock(return_value=(mock_response, 0.025))
+        
+        # Create provider with mock LLM
+        llm_provider = create_provider(mock_llm)
         
         context = {
             'language': 'German',
@@ -135,7 +152,7 @@ class TestAnswerQuestion:
         
         question = "When should I use 'der', 'die', or 'das'?"
         
-        answer, cost = await answer_question("test-model", question, context)
+        answer, cost = await answer_question("test-model", question, context, llm_provider=llm_provider)
         
         # Verify response
         assert answer == "Detailed grammatical explanation"
@@ -152,12 +169,15 @@ class TestAnswerQuestion:
         assert 'planning a vacation' in prompt
         assert question in prompt
     
-    @patch('language_tutor.qa.llm')
     @pytest.mark.asyncio
-    async def test_answer_question_educational_focus(self, mock_llm):
+    async def test_answer_question_educational_focus(self):
         """Test that the prompt emphasizes educational focus."""
         mock_response = create_mock_response("Educational response")
+        mock_llm = Mock(spec=LLM)
         mock_llm.completion = AsyncMock(return_value=(mock_response, 0.01))
+        
+        # Create provider with mock LLM
+        llm_provider = create_provider(mock_llm)
         
         context = {
             'language': 'Italian',
@@ -169,7 +189,8 @@ class TestAnswerQuestion:
         await answer_question(
             "test-model",
             "What does this word mean?",
-            context
+            context,
+            llm_provider=llm_provider
         )
         
         call_args = mock_llm.completion.call_args
@@ -180,13 +201,16 @@ class TestAnswerQuestion:
         assert 'educational' in prompt.lower()
         assert 'language learning' in prompt.lower()
     
-    @patch('language_tutor.qa.llm')
     @pytest.mark.asyncio
-    async def test_answer_question_response_extraction(self, mock_llm):
+    async def test_answer_question_response_extraction(self):
         """Test that response content is correctly extracted."""
         expected_answer = "This is a detailed explanation about grammar rules."
         mock_response = create_mock_response(expected_answer)
+        mock_llm = Mock(spec=LLM)
         mock_llm.completion = AsyncMock(return_value=(mock_response, 0.018))
+        
+        # Create provider with mock LLM
+        llm_provider = create_provider(mock_llm)
         
         context = {
             'language': 'Portuguese',
@@ -198,18 +222,22 @@ class TestAnswerQuestion:
         answer, cost = await answer_question(
             "advanced-model",
             "How do I maintain formal tone?",
-            context
+            context,
+            llm_provider=llm_provider
         )
         
         assert answer == expected_answer
         assert cost == 0.018
     
-    @patch('language_tutor.qa.llm')
     @pytest.mark.asyncio
-    async def test_answer_question_error_handling(self, mock_llm):
+    async def test_answer_question_error_handling(self):
         """Test error handling when LLM call fails."""
         # Mock an exception from the LLM
+        mock_llm = Mock(spec=LLM)
         mock_llm.completion = AsyncMock(side_effect=Exception("API Error"))
+        
+        # Create provider with mock LLM
+        llm_provider = create_provider(mock_llm)
         
         context = {
             'language': 'English',
@@ -219,14 +247,17 @@ class TestAnswerQuestion:
         }
         
         with pytest.raises(Exception, match="API Error"):
-            await answer_question("model", "Test question", context)
+            await answer_question("model", "Test question", context, llm_provider=llm_provider)
     
-    @patch('language_tutor.qa.llm')
     @pytest.mark.asyncio
-    async def test_answer_question_empty_response(self, mock_llm):
+    async def test_answer_question_empty_response(self):
         """Test handling of empty response from LLM."""
         mock_response = create_mock_response("")
+        mock_llm = Mock(spec=LLM)
         mock_llm.completion = AsyncMock(return_value=(mock_response, 0.001))
+        
+        # Create provider with mock LLM
+        llm_provider = create_provider(mock_llm)
         
         context = {
             'language': 'English',
@@ -235,7 +266,7 @@ class TestAnswerQuestion:
             'exercise': 'Test exercise'
         }
         
-        answer, cost = await answer_question("model", "Test?", context)
+        answer, cost = await answer_question("model", "Test?", context, llm_provider=llm_provider)
         
         assert answer == ""
         assert cost == 0.001
@@ -244,15 +275,18 @@ class TestAnswerQuestion:
 class TestQAIntegration:
     """Integration tests for Q&A functionality."""
     
-    @patch('language_tutor.qa.llm')
     @pytest.mark.asyncio
-    async def test_qa_full_workflow(self, mock_llm):
+    async def test_qa_full_workflow(self):
         """Test a complete Q&A workflow."""
         mock_response = create_mock_response(
             "In Spanish, subjunctive mood is used to express doubt, emotion, or hypothetical situations. "
             "For example: 'Espero que tengas un buen día' (I hope you have a good day)."
         )
+        mock_llm = Mock(spec=LLM)
         mock_llm.completion = AsyncMock(return_value=(mock_response, 0.03))
+        
+        # Create provider with mock LLM
+        llm_provider = create_provider(mock_llm)
         
         # Simulate a realistic Q&A scenario
         context = {
@@ -267,7 +301,8 @@ class TestQAIntegration:
         answer, cost = await answer_question(
             "openrouter/anthropic/claude-3-opus",
             question,
-            context
+            context,
+            llm_provider=llm_provider
         )
         
         # Verify educational quality of response
