@@ -6,7 +6,7 @@ import random
 import datetime
 from language_tutor.llm import create_provider, LLMProvider
 from dotenv import load_dotenv
-from PyQt5.QtWidgets import (
+from PyQt6.QtWidgets import (
     QMainWindow,
     QWidget,
     QVBoxLayout,
@@ -18,17 +18,15 @@ from PyQt5.QtWidgets import (
     QSplitter,
     QApplication,
     QMessageBox,
-    QAction,
     QFileDialog,
     QStatusBar,
     QTabWidget,
-    QShortcut,
     QFrame,
     QFormLayout,
     QGroupBox,
 )
-from PyQt5.QtCore import Qt, QTimer, QFileSystemWatcher
-from PyQt5.QtGui import QFont, QTextDocument, QKeySequence, QTextCursor, QColor
+from PyQt6.QtCore import Qt, QTimer, QFileSystemWatcher
+from PyQt6.QtGui import QFont, QTextDocument, QKeySequence, QTextCursor, QColor, QAction, QShortcut
 
 from language_tutor.config import (
     LANGUAGES,

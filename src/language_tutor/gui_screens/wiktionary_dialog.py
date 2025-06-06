@@ -3,19 +3,18 @@
 import urllib.parse
 
 from language_tutor.utils import build_wiktionary_url
-from PyQt5.QtWidgets import (
+from PyQt6.QtWidgets import (
     QDialog,
     QGridLayout,
     QLabel,
     QLineEdit,
     QPushButton,
     QHBoxLayout,
-    QShortcut,
     QSizePolicy,
 )
-from PyQt5.QtCore import QUrl
-from PyQt5.QtGui import QKeySequence
-from PyQt5.QtWebEngineWidgets import QWebEngineView
+from PyQt6.QtCore import QUrl
+from PyQt6.QtGui import QKeySequence, QShortcut
+from PyQt6.QtWebEngineWidgets import QWebEngineView
 
 
 class WiktionaryDialog(QDialog):

@@ -2,36 +2,51 @@
 
 import pytest
 from unittest.mock import Mock, patch, MagicMock
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QTextCursor, QTextCharFormat, QColor
-from PyQt5.QtWidgets import QApplication, QTextEdit
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QTextCursor, QTextCharFormat, QColor
+from PyQt6.QtWidgets import QApplication, QTextEdit
 
 from language_tutor.feedback_handler import FeedbackHandler, format_mistakes_with_hover
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def qt_app():
-    """Fixture to ensure QApplication exists for tests."""
+    """Session-scoped fixture to ensure QApplication exists for tests."""
+    import os
+    # Set headless mode for CI environments
+    os.environ['QT_QPA_PLATFORM'] = 'offscreen'
+    
     app = QApplication.instance()
     if app is None:
         app = QApplication([])
     return app
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def text_widgets(qt_app):
-    """Fixture providing text widgets for testing."""
-    writing_input = QTextEdit()
-    mistakes_display = QTextEdit()
-    style_display = QTextEdit()
+    """Fixture providing mock text widgets for testing."""
+    writing_input = Mock(spec=QTextEdit)
+    mistakes_display = Mock(spec=QTextEdit)
+    style_display = Mock(spec=QTextEdit)
+    
+    # Configure mocks with necessary attributes
+    writing_input.toPlainText.return_value = ""
+    mistakes_display.setHtml = Mock()
+    style_display.setHtml = Mock()
+    mistakes_display.mouseMoveEvent = Mock()
+    mistakes_display.leaveEvent = Mock()
+    style_display.mouseMoveEvent = Mock()
+    style_display.leaveEvent = Mock()
+    
     return writing_input, mistakes_display, style_display
 
 
-@pytest.fixture
+@pytest.fixture(scope="session") 
 def feedback_handler(text_widgets):
-    """Fixture providing a FeedbackHandler instance."""
+    """Fixture providing a FeedbackHandler instance with mocked widgets."""
     writing_input, mistakes_display, style_display = text_widgets
-    return FeedbackHandler(writing_input, mistakes_display, style_display)
+    handler = FeedbackHandler(writing_input, mistakes_display, style_display)
+    return handler
 
 
 class TestFeedbackHandlerInitialization:

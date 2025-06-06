@@ -5,7 +5,7 @@ import sys
 import os
 import nest_asyncio
 
-from PyQt5.QtWidgets import QApplication
+from PyQt6.QtWidgets import QApplication
 from language_tutor.gui_app import LanguageTutorGUI
 from language_tutor.languages import exercise_types, definitions
 from language_tutor import __version__

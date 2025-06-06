@@ -3,7 +3,7 @@
 import json
 import os
 from language_tutor.llm import LLMProvider
-from PyQt5.QtWidgets import (
+from PyQt6.QtWidgets import (
     QDialog,
     QVBoxLayout,
     QLabel,
@@ -11,10 +11,9 @@ from PyQt5.QtWidgets import (
     QTextEdit,
     QPushButton,
     QHBoxLayout,
-    QShortcut,
 )
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QKeySequence
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QKeySequence, QShortcut
 
 from language_tutor.config import (
     AI_MODELS,

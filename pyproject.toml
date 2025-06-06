@@ -15,8 +15,9 @@ authors = [
 dependencies = [
     "litellm>=1.67.2",
     "nest-asyncio>=1.6.0",
-    "pyqt5>=5.15.11",
-    "pyqtwebengine>=5.15.7",
+    "pyqt6>=6.5.0",
+    "pyqt6-qt6>=6.5.0",
+    "pyqt6-webengine>=6.5.0",
     "pytest-asyncio>=1.0.0",
     "python-dotenv>=1.1.0",
     "toml>=0.10.2",
@@ -24,6 +25,7 @@ dependencies = [
 
 [project.scripts]
 language-tutor-ui = "language_tutor.gui:main"
+language-tutor-qml = "language_tutor.gui_qml:main"
 
 
 [project.urls]
@@ -37,6 +39,7 @@ packages = [
     "language_tutor.languages",
     "language_tutor.gui_screens",
     "language_tutor.llms",
+    "language_tutor.qml",
 ]
 
 [dependency-groups]

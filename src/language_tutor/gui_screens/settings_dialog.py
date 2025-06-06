@@ -2,7 +2,7 @@
 
 import os
 from language_tutor.llm import LLMProvider
-from PyQt5.QtWidgets import (
+from PyQt6.QtWidgets import (
     QDialog,
     QVBoxLayout,
     QLabel,

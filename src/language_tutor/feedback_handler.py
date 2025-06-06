@@ -1,4 +1,4 @@
-from PyQt5.QtGui import QFont, QTextDocument, QTextCursor, QColor
+from PyQt6.QtGui import QFont, QTextDocument, QTextCursor, QColor
 
 
 class FeedbackHandler:

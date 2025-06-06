@@ -137,6 +137,7 @@ class TestLiteLLM:
             else:
                 os.environ.pop("OPENROUTER_API_KEY", None)
     
+    @patch.dict(os.environ, {}, clear=True)
     def test_get_api_key(self):
         """Test getting API key."""
         mock_litellm = Mock()
@@ -148,6 +149,7 @@ class TestLiteLLM:
             llm_instance = LiteLLM()
             assert llm_instance.get_api_key() == "retrieved_key"
     
+    @patch.dict(os.environ, {}, clear=True)
     def test_get_api_key_empty(self):
         """Test getting API key when None."""
         mock_litellm = Mock()
@@ -170,6 +172,7 @@ class TestLiteLLM:
             llm_instance = LiteLLM()
             assert llm_instance.is_configured() is True
     
+    @patch.dict(os.environ, {}, clear=True)
     def test_is_configured_false(self):
         """Test is_configured returns False when API key is not set."""
         mock_litellm = Mock()

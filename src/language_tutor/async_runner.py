@@ -11,7 +11,7 @@ except Exception:  # pragma: no cover - fallback when dependency missing
     nest_asyncio = _NestAsyncIO()  # type: ignore
 
 try:
-    from PyQt5.QtWidgets import QApplication
+    from PyQt6.QtWidgets import QApplication
 except Exception:  # pragma: no cover - fallback when dependency missing
     class QApplication:
         @staticmethod

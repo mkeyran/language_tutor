@@ -27,3 +27,8 @@ for type in exercise_types.keys():
     exercise_types[type] = (
         [("Random", "Random")] + exercise_types[type] + [("Custom", "Custom")]
     )
+
+
+def get_language_data():
+    """Get exercise types and definitions for all languages."""
+    return exercise_types, definitions
