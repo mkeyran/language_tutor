@@ -53,9 +53,14 @@ from language_tutor.feedback_handler import FeedbackHandler, format_mistakes_wit
 class LanguageTutorGUI(QMainWindow):
     """PyQt GUI for Language Tutor application."""
 
-    def __init__(self, exercise_types, exercise_definitions, llm_provider: LLMProvider | None = None):
+    def __init__(
+        self,
+        exercise_types,
+        exercise_definitions,
+        llm_provider: LLMProvider | None = None,
+    ):
         """Initialize the GUI with exercise types and definitions.
-        
+
         Args:
             exercise_types: Available exercise types
             exercise_definitions: Exercise definitions
@@ -69,7 +74,7 @@ class LanguageTutorGUI(QMainWindow):
         self.exercise_types = []
 
         self.text_font_size = DEFAULT_TEXT_FONT_SIZE
-        
+
         # Initialize LLM provider
         self.llm_provider = llm_provider or create_provider()
 
@@ -104,7 +109,7 @@ class LanguageTutorGUI(QMainWindow):
         env_path = os.path.join(get_config_dir(), ".env")
         if os.path.exists(env_path):
             load_dotenv(env_path)
-        
+
         llm = self.llm_provider.get_llm()
         llm.set_api_key(os.getenv("OPENROUTER_API_KEY", ""))
         llm.set_base_url("https://openrouter.ai/api/v1")
@@ -539,9 +544,7 @@ class LanguageTutorGUI(QMainWindow):
                     self.writing_input_area.setText(text)
                     self._setting_text_from_sync = False
                 except Exception as e:
-                    self.statusBar().showMessage(
-                        f"Error reading sync file: {e}", 5000
-                    )
+                    self.statusBar().showMessage(f"Error reading sync file: {e}", 5000)
 
     def _on_writing_changed(self):
         """Handle changes in the writing input."""
@@ -635,7 +638,7 @@ class LanguageTutorGUI(QMainWindow):
                 )
                 return
 
-            if not llm.is_configured():
+            if not self.llm_provider.get_llm().is_configured():
                 QMessageBox.critical(
                     self,
                     "API Key Required",
